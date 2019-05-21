@@ -1,0 +1,100 @@
+import com.squareup.wire.WireCompiler
+
+apply plugin: 'kotlin'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+compileKotlin {
+  kotlinOptions {
+    jvmTarget = "1.8"
+    allWarningsAsErrors = true
+  }
+}
+
+compileTestKotlin {
+  kotlinOptions {
+    jvmTarget = "1.8"
+    allWarningsAsErrors = true
+  }
+}
+
+sourceSets {
+  main.java.srcDirs += 'src/main/kotlin/'
+  test.java.srcDirs += 'src/test/kotlin/'
+}
+
+dependencies {
+  implementation dep.guava
+  implementation dep.guice
+  implementation dep.guiceMultibindings
+  implementation dep.jacksonDatabind
+  implementation dep.jacksonDataformatYaml
+  implementation dep.jacksonJsr310
+  implementation dep.jacksonKotlin
+  implementation dep.jettyServer
+  implementation dep.jettyServlet
+  implementation dep.jettyWebsocketServer
+  implementation dep.jettyWebsocketServlet
+  implementation dep.kotlinReflection
+  implementation dep.kotlinScriptRuntime
+  implementation dep.kotlinStdLib
+  implementation dep.loggingApi
+  implementation dep.metricsCore
+  implementation dep.metricsParent
+  implementation dep.misk
+  implementation dep.moshi
+  implementation dep.okHttp
+  implementation dep.okio
+  implementation dep.openTracing
+  implementation dep.openTracingOkHttp
+  implementation dep.skim
+  implementation dep.tracingJaeger
+  implementation dep.wireCompiler
+  implementation dep.wireRuntime
+  implementation dep.wireSchema
+  implementation project(':client')
+
+  testImplementation dep.assertj
+  testImplementation dep.junitApi
+  testImplementation dep.junitEngine
+  testImplementation dep.junitParams
+  testImplementation dep.mockito
+  testImplementation dep.mockitoKotlin
+  testImplementation dep.openTracingMock
+  testImplementation dep.miskTesting
+}
+
+jar {
+  manifest {
+    attributes 'Main-Class': 'com.squareup.cash.barber.service.BarberServiceKt'
+  }
+  classifier = 'unshaded'
+}
+
+shadowJar {
+  exclude('module-info.class') // https://github.com/johnrengelman/shadow/issues/352
+  mergeServiceFiles()
+  zip64 true
+  classifier = null
+}
+
+task compileWire {
+  doLast {
+    /**
+     * We compile the protos and put them in the client project's generated source set, this way
+     * the client has access to the protos. The service project depends on and compiles
+     * the client project and thus also includes the protos. The client's compile task must
+     * depend on this task.
+     */
+    def clientBuildSrc = findProject(":client").file("build/generated/source/protos/main/java")
+    "mkdir -p $clientBuildSrc/com/squareup/protos/cash/barber".execute()
+    def clientProtoArgs = [
+            "--proto_path=service/src/main/proto",
+            "--java_out=" + clientBuildSrc,
+            "squareup/cash/barber/service.proto"
+    ]
+    WireCompiler.main(clientProtoArgs.toArray(new String[clientProtoArgs.size()]))
+  }
+}
+
+compileKotlin.dependsOn compileWire
+compileTestKotlin.dependsOn compileWire

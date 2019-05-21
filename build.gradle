@@ -1,0 +1,43 @@
+apply from: new File("./dependencies.gradle")
+
+subprojects {
+  apply plugin: "java"
+  buildscript {
+    repositories {
+      maven {
+        url "https://maven.global.square/artifactory/square-public"
+      }
+      mavenCentral()
+      jcenter()
+    }
+
+    dependencies {
+      classpath dep.kotlinGradlePlugin
+      classpath dep.wireCompiler
+      classpath 'org.junit.platform:junit-platform-gradle-plugin:1.0.2'
+      classpath dep.shadowJarPlugin
+      classpath 'com.vanniktech:gradle-maven-publish-plugin:0.2.0'
+    }
+  }
+
+  repositories {
+    maven {
+      url "https://maven.global.square/artifactory/square-public"
+    }
+    mavenCentral()
+    jcenter()
+  }
+  dependencies {
+    testImplementation dep.junitApi
+    testRuntimeOnly dep.junitEngine
+  }
+  test {
+    useJUnitPlatform()
+    testLogging {
+      events "started", "passed", "skipped", "failed"
+      exceptionFormat = 'full'
+      showExceptions = true
+    }
+  }
+}
+
