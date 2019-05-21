@@ -3,4 +3,4 @@
 set -euxo pipefail
 
 git clone ssh://git@git.sqcorp.co/cash/cash-ci.git
-./cash-ci/cash-ci -s barber
+./cash-ci/cash-lib-ci

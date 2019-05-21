@@ -19,6 +19,7 @@ ext.dep = [
   "kotlinReflection": "org.jetbrains.kotlin:kotlin-reflect:1.3.21",
   "kotlinScriptRuntime": "org.jetbrains.kotlin:kotlin-script-runtime:1.3.21",
   "kotlinStdLib": "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.21",
+  "kotlinTest": "org.jetbrains.kotlin:kotlin-test:1.3.21",
   "loggingApi": "io.github.microutils:kotlin-logging:1.4.9",
   "metricsCore": "io.dropwizard.metrics:metrics-core:4.0.1",
   "metricsParent": "io.dropwizard.metrics:metrics-parent:4.0.1",
