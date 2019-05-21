@@ -1,9 +1,0 @@
-skim:
-  web:
-    port: 8080
-    idle_timeout: 30000
-
-  http_clients:
-    endpoints:
-      web_proxy_action:
-        url: http://localhost/
