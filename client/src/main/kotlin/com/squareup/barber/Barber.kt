@@ -11,6 +11,8 @@ class Barber {
   /**
    * @return a SpecRenderer from a specific CopyModel to a specific DocumentSpec
    */
+  private val installedDocumentCopy: MutableSet<DocumentCopy> = mutableSetOf()
+
   @Suppress("UNUSED_PARAMETER")
   fun <C : CopyModel, D : DocumentSpec> newSpecRenderer(
     copyModelClass: KClass<C>,
@@ -36,10 +38,10 @@ class Barber {
   }
 
   /**
-   * Consumes a DocumentCopy and persists in memory
+   * Consumes a DocumentCopy and persists in-memory
+   * At boot, a service will call installCopy on all DocumentCopy to add to the in-memory Barber instance
    */
-  @Suppress("UNUSED_PARAMETER")
   fun installCopy(documentCopy: DocumentCopy) {
-    // DO NOTHING YET!
+    installedDocumentCopy.add(documentCopy)
   }
 }
