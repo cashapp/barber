@@ -5,11 +5,77 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.time.Instant
-import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNotNull
 
 class BarberTest {
+  @Test
+  fun installCopy() {
+    val recipientReceiptDocumentCopy = DocumentCopy(
+      fields = mapOf(
+        "subject" to "",
+        "headline" to "",
+        "short_description" to "",
+        "primary_button" to "",
+        "primary_button_url" to ""
+      ),
+      source = RecipientReceipt::class,
+      targets = setOf(TransactionalEmailDocumentSpec::class),
+      locale = Locale.EN_US
+    )
+    val barber = Barber()
+    barber.installDocumentSpec<TransactionalEmailDocumentSpec>()
+    barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+  }
+
+  @Test
+  fun installCopyFailsOnMissingDocumentSpec() {
+    val recipientReceiptDocumentCopy = DocumentCopy(
+      fields = mapOf(
+        "subject" to "",
+        "headline" to "",
+        "short_description" to "",
+        "primary_button" to "",
+        "primary_button_url" to ""
+      ),
+      source = RecipientReceipt::class,
+      targets = setOf(TransactionalEmailDocumentSpec::class),
+      locale = Locale.EN_US
+    )
+    val barber = Barber()
+    val exception = assertFailsWith<BarberException> {
+      barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+    }
+    assertThat(exception.problems).containsExactly("""
+      |Attempted to install DocumentCopy without the corresponding DocumentSpec being installed.
+      |Not installed DocumentCopy.targets:
+      |[class com.squareup.barber.examples.TransactionalEmailDocumentSpec]""".trimMargin())
+  }
+
+  @Test
+  fun installCopyFailsOnMismatchCopyModel() {
+    val recipientReceiptDocumentCopy = DocumentCopy(
+      fields = mapOf(
+        "subject" to "",
+        "headline" to "",
+        "short_description" to "",
+        "primary_button" to "",
+        "primary_button_url" to ""
+      ),
+      source = RecipientReceipt::class,
+      targets = setOf(TransactionalEmailDocumentSpec::class),
+      locale = Locale.EN_US
+    )
+    val barber = Barber()
+    barber.installDocumentSpec<TransactionalEmailDocumentSpec>()
+    val exception = assertFailsWith<BarberException> {
+      barber.installCopy<SenderReceipt>(recipientReceiptDocumentCopy)
+    }
+    assertThat(exception.problems).containsExactly("""
+      |Attempted to install DocumentCopy with a CopyModel not specific in the DocumentCopy source.
+      |DocumentCopy.source: class com.squareup.barber.RecipientReceipt
+      |CopyModel: class com.squareup.barber.SenderReceipt""".trimMargin())
+  }
+
   @Disabled @Test
   fun happyPath() {
     val recipientReceipt = RecipientReceipt(
@@ -34,7 +100,8 @@ class BarberTest {
     )
 
     val barber = Barber()
-    barber.installCopy(recipientReceiptDocumentCopy)
+    barber.installDocumentSpec<TransactionalEmailDocumentSpec>()
+    barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
 
     val specRenderer = barber.newSpecRenderer(RecipientReceipt::class, TransactionalEmailDocumentSpec::class)
     val spec = specRenderer.render(recipientReceipt)
@@ -69,7 +136,7 @@ class BarberTest {
 
     val barber = Barber()
     val exception = assertFailsWith<BarberException> {
-      barber.installCopy(recipientReceiptDocumentCopy)
+      barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
     }
     assertThat(exception.problems).containsExactly("""
         |output field 'subject' uses 'totally_invalid_field' but 'RecipientReceipt' has no such field
@@ -98,7 +165,7 @@ class BarberTest {
 
     val barber = Barber()
     val exception = assertFailsWith<BarberException> {
-      barber.installCopy(recipientReceiptDocumentCopy)
+      barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
     }
     assertThat(exception.problems).containsExactly("""
         |output field 'short_description' is required but was not found
@@ -123,7 +190,7 @@ class BarberTest {
 
     val barber = Barber()
     val exception = assertFailsWith<BarberException> {
-      barber.installCopy(recipientReceiptDocumentCopy)
+      barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
     }
     assertThat(exception.problems).containsExactly("""
         |output field 'tertiary_button_url' is not used
@@ -147,7 +214,7 @@ class BarberTest {
     )
 
     val barber = Barber()
-    barber.installCopy(recipientReceiptDocumentCopy)
+    barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
 
     val exception = assertFailsWith<BarberException> {
       barber.newSpecRenderer(SenderReceipt::class, TransactionalEmailDocumentSpec::class)
@@ -175,7 +242,7 @@ class BarberTest {
     )
 
     val barber = Barber()
-    barber.installCopy(recipientReceiptDocumentCopy)
+    barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
 
     val exception = assertFailsWith<BarberException> {
       barber.newSpecRenderer(RecipientReceipt::class, SmsDocumentSpec::class)
@@ -189,6 +256,15 @@ class BarberTest {
 
   @Disabled @Test
   fun singleDocumentCopyHasMultipleTargets() {
+    TODO()
+  }
+
+  @Disabled @Test
+  fun failOnSingleUnit() {
+    data class StrangeUnitCopyModel(
+      val strange: Unit
+    ) : CopyModel
+
     TODO()
   }
 }

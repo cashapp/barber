@@ -8,11 +8,13 @@ import kotlin.reflect.KClass
  * 2) Provides specRenderers from a passed in CopyModel to a DocumentSpec
  */
 class Barber {
+  private val installedCopyModel: MutableSet<KClass<out CopyModel>> = mutableSetOf()
+  private val installedDocumentCopy: MutableSet<DocumentCopy> = mutableSetOf()
+  private val installedDocumentSpec: MutableSet<KClass<out DocumentSpec>> = mutableSetOf()
+
   /**
    * @return a SpecRenderer from a specific CopyModel to a specific DocumentSpec
    */
-  private val installedDocumentCopy: MutableSet<DocumentCopy> = mutableSetOf()
-
   @Suppress("UNUSED_PARAMETER")
   fun <C : CopyModel, D : DocumentSpec> newSpecRenderer(
     copyModelClass: KClass<C>,
@@ -38,10 +40,40 @@ class Barber {
   }
 
   /**
-   * Consumes a DocumentCopy and persists in-memory
-   * At boot, a service will call installCopy on all DocumentCopy to add to the in-memory Barber instance
+   * Consumes a [CopyModel] and corresponding [DocumentCopy] and persists in-memory
+   * At boot, a service will call [installCopy] on all [CopyModel] and [DocumentCopy] to add to the in-memory Barber
    */
-  fun installCopy(documentCopy: DocumentCopy) {
+  fun installCopy(copyModel: KClass<out CopyModel>, documentCopy: DocumentCopy) {
+    if (documentCopy.source != copyModel) {
+      throw BarberException(problems = listOf("""
+        |Attempted to install DocumentCopy with a CopyModel not specific in the DocumentCopy source.
+        |DocumentCopy.source: ${documentCopy.source}
+        |CopyModel: $copyModel
+        """.trimMargin()))
+    }
+    val notInstalledDocumentSpec = documentCopy.targets.filter {
+      !installedDocumentSpec.contains(it)
+    }
+    if (notInstalledDocumentSpec.isNotEmpty()) {
+      throw BarberException(problems = listOf("""
+        |Attempted to install DocumentCopy without the corresponding DocumentSpec being installed.
+        |Not installed DocumentCopy.targets:
+        |$notInstalledDocumentSpec
+        """.trimMargin()))
+    }
+    installedCopyModel.add(copyModel)
     installedDocumentCopy.add(documentCopy)
   }
+
+  inline fun <reified C : CopyModel> installCopy(documentCopy: DocumentCopy) = installCopy(C::class, documentCopy)
+
+  /**
+   * Consumes a [DocumentSpec] and persists in-memory
+   * At boot, a service will call [installDocumentSpec] on all [DocumentSpec] to add to the in-memory Barber instance
+   */
+  fun installDocumentSpec(documentSpec: KClass<out DocumentSpec>) {
+    installedDocumentSpec.add(documentSpec)
+  }
+
+  inline fun <reified D : DocumentSpec> installDocumentSpec() = installDocumentSpec(D::class)
 }
