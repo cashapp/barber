@@ -1,6 +1,7 @@
 package com.squareup.barber
 
 import com.squareup.barber.examples.TransactionalEmailDocumentSpec
+import com.squareup.barber.examples.TransactionalSmsDocumentSpec
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
@@ -76,8 +77,45 @@ class BarberTest {
       |CopyModel: class com.squareup.barber.SenderReceipt""".trimMargin())
   }
 
+  @Test
+  fun happyPathSms() {
+    val recipientReceipt = RecipientReceipt(
+      sender = "Sandy Winchester",
+      amount = "$50",
+      cancelUrl = "https://cash.app/cancel/123",
+      deposit_expected_at = Instant.parse("2019-05-21T16:02:00.00Z")
+    )
+
+    val recipientReceiptDocumentCopy = DocumentCopy(
+      fields = mapOf(
+        "subject" to "{sender} sent you {amount}",
+        "headline" to "You received {amount}",
+        "short_description" to "You’ve received a payment from {sender}! The money will be in your bank account " +
+          "{deposit_expected_at_casual}.",
+        "primary_button" to "Cancel this payment",
+        "primary_button_url" to "{cancelUrl}",
+        "sms_body" to "{sender} sent you {amount}"
+      ),
+      source = RecipientReceipt::class,
+      targets = setOf(TransactionalSmsDocumentSpec::class),
+      locale = Locale.EN_US
+    )
+
+    val barber = Barber()
+    barber.installDocumentSpec<TransactionalSmsDocumentSpec>()
+    barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+
+    val spec = barber.render<TransactionalSmsDocumentSpec>(recipientReceipt)
+
+    assertThat(spec).isEqualTo(
+      TransactionalSmsDocumentSpec(
+        sms_body = "Sandy Winchester sent you $50"
+      )
+    )
+  }
+
   @Disabled @Test
-  fun happyPath() {
+  fun happyPathEmail() {
     val recipientReceipt = RecipientReceipt(
       sender = "Sandy Winchester",
       amount = "$50",
@@ -103,8 +141,9 @@ class BarberTest {
     barber.installDocumentSpec<TransactionalEmailDocumentSpec>()
     barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
 
-    val specRenderer = barber.newSpecRenderer(RecipientReceipt::class, TransactionalEmailDocumentSpec::class)
-    val spec = specRenderer.render(recipientReceipt)
+//    val specRenderer = barber.newSpecRenderer(RecipientReceipt::class, TransactionalEmailDocumentSpec::class)
+//    val spec = specRenderer.render(recipientReceipt)
+    val spec = barber.render<TransactionalEmailDocumentSpec>(recipientReceipt)
 
     assertThat(spec).isEqualTo(
       TransactionalEmailDocumentSpec(

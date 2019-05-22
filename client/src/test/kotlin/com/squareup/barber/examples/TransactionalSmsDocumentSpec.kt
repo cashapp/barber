@@ -8,5 +8,5 @@ import com.squareup.barber.HtmlString
  * An example DocumentSpec for Sms messages
  */
 data class TransactionalSmsDocumentSpec(
-  val body: String
+  val sms_body: String
 ) : DocumentSpec
