@@ -3,12 +3,20 @@ package com.squareup.barber
 import com.squareup.barber.examples.TransactionalEmailDocumentSpec
 import com.squareup.barber.examples.TransactionalSmsDocumentSpec
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import kotlin.test.assertFailsWith
 
 class BarberTest {
+  lateinit var barber: Barber
+
+  @BeforeEach
+  fun beforeEach() {
+    barber = BarberImpl()
+  }
+
   @Test
   fun installCopy() {
     val recipientReceiptDocumentCopy = DocumentCopy(
@@ -23,7 +31,6 @@ class BarberTest {
       targets = setOf(TransactionalEmailDocumentSpec::class),
       locale = Locale.EN_US
     )
-    val barber = BarberImpl()
     barber.installDocumentSpec<TransactionalEmailDocumentSpec>()
     barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
   }
@@ -42,7 +49,6 @@ class BarberTest {
       targets = setOf(TransactionalEmailDocumentSpec::class),
       locale = Locale.EN_US
     )
-    val barber = BarberImpl()
     val exception = assertFailsWith<BarberException> {
       barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
     }
@@ -66,7 +72,6 @@ class BarberTest {
       targets = setOf(TransactionalEmailDocumentSpec::class),
       locale = Locale.EN_US
     )
-    val barber = BarberImpl()
     barber.installDocumentSpec<TransactionalEmailDocumentSpec>()
     val exception = assertFailsWith<BarberException> {
       barber.installCopy<SenderReceipt>(recipientReceiptDocumentCopy)
@@ -101,7 +106,6 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    val barber = BarberImpl()
     barber.installDocumentSpec<TransactionalSmsDocumentSpec>()
     barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
 
@@ -137,7 +141,6 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    val barber = BarberImpl()
     barber.installDocumentSpec<TransactionalEmailDocumentSpec>()
     barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
 
@@ -171,7 +174,6 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    val barber = BarberImpl()
     val exception = assertFailsWith<BarberException> {
       barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
     }
@@ -200,7 +202,6 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    val barber = BarberImpl()
     val exception = assertFailsWith<BarberException> {
       barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
     }
@@ -225,7 +226,6 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    val barber = BarberImpl()
     val exception = assertFailsWith<BarberException> {
       barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
     }
@@ -250,7 +250,6 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    val barber = BarberImpl()
     barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
 
     val exception = assertFailsWith<BarberException> {
@@ -278,7 +277,6 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    val barber = BarberImpl()
     barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
 
     val exception = assertFailsWith<BarberException> {

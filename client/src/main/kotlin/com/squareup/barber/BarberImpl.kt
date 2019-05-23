@@ -5,12 +5,14 @@ import kotlin.reflect.full.primaryConstructor
 
 class BarberImpl : Barber {
   private val installedCopyModel: MutableSet<KClass<out CopyModel>> = mutableSetOf()
-  private val installedDocumentCopy: MutableSet<DocumentCopy> = mutableSetOf()
+  private val installedDocumentCopy: MutableMap<KClass<out CopyModel>, DocumentCopy> = mutableMapOf()
   private val installedDocumentSpec: MutableSet<KClass<out DocumentSpec>> = mutableSetOf()
 
   override fun render(copyModel: CopyModel, documentSpecClass: KClass<out DocumentSpec>): DocumentSpec {
     val copyModelClass = copyModel::class
-    val documentCopy = getCopyBySourceClass(copyModelClass)
+    val documentCopy = installedDocumentCopy[copyModelClass] ?: throw BarberException(problems = listOf("""
+      |Attempted to render DocumentCopy that has not been installed for CopyModel: $copyModelClass.
+    """.trimMargin()))
     if (!documentCopy.targets.contains(documentSpecClass)) {
       throw BarberException(problems = listOf("""
         |Specified target $documentSpecClass not a valid target for CopyModel's corresponding DocumentCopy.
@@ -36,7 +38,7 @@ class BarberImpl : Barber {
     val parameters = parameterValues.filter {
       parametersByName.containsKey(it.key)
     }.mapKeys {
-      parametersByName[it.key] ?: throw IllegalStateException("Missing KParameter for ${it.key}")
+      parametersByName[it.key] ?: throw BarberException(problems = listOf("Missing KParameter for ${it.key}"))
     }
     return documentSpecConstructor.callBy(parameters)
   }
@@ -59,26 +61,22 @@ class BarberImpl : Barber {
         |$notInstalledDocumentSpec
         """.trimMargin()))
     }
+    if (installedDocumentCopy.containsKey(copyModel) && installedDocumentCopy[copyModel] != documentCopy) {
+      throw BarberException(problems = listOf("""
+        |Attempted to install DocumentCopy that matches an already installed CopyModel.
+        |Already Installed
+        |CopyModel: $copyModel
+        |DocumentCopy: $installedDocumentCopy[copyModel]
+        |
+        |Attempted to Install
+        |$documentCopy
+      """.trimMargin()))
+    }
     installedCopyModel.add(copyModel)
-    installedDocumentCopy.add(documentCopy)
+    installedDocumentCopy[copyModel] = documentCopy
   }
 
   override fun installDocumentSpec(documentSpec: KClass<out DocumentSpec>) {
     installedDocumentSpec.add(documentSpec)
-  }
-
-  /**
-   * @return the in-memory [DocumentCopy] with source that matches the passed in [CopyModel]
-   * [CopyModel] and [DocumentCopy] have a 1:1 relationship
-   */
-  private fun getCopyBySourceClass(copyModel: KClass<out CopyModel>): DocumentCopy {
-    val documentCopy = this.installedDocumentCopy.filter {
-      it.source == copyModel
-    }
-    if (documentCopy.size != 1) {
-      throw BarberException(problems = listOf("""
-        |Single DocumentCopy corresponding to a CopyModel not found for $copyModel.""".trimMargin()))
-    }
-    return documentCopy.first()
   }
 }
