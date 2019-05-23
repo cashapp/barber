@@ -1,7 +1,6 @@
 package com.squareup.barber.examples
 
-import com.squareup.barber.DocumentSpec
-import com.squareup.barber.HtmlString
+import com.squareup.barber.models.DocumentSpec
 
 // TODO: this does not belong in main
 /**

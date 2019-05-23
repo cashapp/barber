@@ -29,6 +29,7 @@ dependencies {
   implementation dep.kotlinReflection
   implementation dep.moshi
   implementation dep.okio
+  implementation dep.mustacheCompiler
   implementation dep.wireRuntime
 
   testImplementation dep.assertj

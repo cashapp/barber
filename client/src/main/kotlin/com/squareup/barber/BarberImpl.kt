@@ -1,6 +1,11 @@
 package com.squareup.barber
 
+import com.squareup.barber.models.CopyModel
+import com.squareup.barber.models.DocumentCopy
+import com.squareup.barber.models.DocumentSpec
+import java.lang.reflect.Constructor
 import kotlin.reflect.KClass
+import kotlin.reflect.KParameter
 import kotlin.reflect.full.primaryConstructor
 
 class BarberImpl : Barber {
@@ -9,10 +14,13 @@ class BarberImpl : Barber {
   private val installedDocumentSpec: MutableSet<KClass<out DocumentSpec>> = mutableSetOf()
 
   override fun render(copyModel: CopyModel, documentSpecClass: KClass<out DocumentSpec>): DocumentSpec {
+    // Lookup installed DocumentCopy that corresponds to CopyModel
     val copyModelClass = copyModel::class
     val documentCopy = installedDocumentCopy[copyModelClass] ?: throw BarberException(problems = listOf("""
-      |Attempted to render DocumentCopy that has not been installed for CopyModel: $copyModelClass.
+      |Attempted to render with DocumentCopy that has not been installed for CopyModel: $copyModelClass.
     """.trimMargin()))
+
+    // Confirm that output DocumentSpec is a valid target for the DocumentCopy
     if (!documentCopy.targets.contains(documentSpecClass)) {
       throw BarberException(problems = listOf("""
         |Specified target $documentSpecClass not a valid target for CopyModel's corresponding DocumentCopy.
@@ -20,26 +28,44 @@ class BarberImpl : Barber {
         |${documentCopy.targets}
       """.trimMargin()))
     }
-    val documentSpecConstructor = documentSpecClass.primaryConstructor ?: throw BarberException(
+
+    // TODO move the "No primary constructor" exception to validate on install instead of here
+    // Validate that DocumentSpec has a Primary Constructor
+    val documentSpecConstructor= documentSpecClass.primaryConstructor ?: throw BarberException(
       problems = listOf("No primary constructor for DocumentSpec class $documentSpecClass."))
-    val parametersByName = documentSpecConstructor.parameters.associateBy { it.name }
 
-    // TODO replace parameterValues with the Mustache rendering
-    val parameterValues = mapOf(
-      "subject" to "Sandy Winchester sent you $50",
-      "headline" to HtmlString("You received $50"),
-      "short_description" to "You’ve received a payment from Sandy Winchester! The money will be in your bank account",
-      "primary_button" to "Cancel this payment",
-      "primary_button_url" to "https://cash.app/cancel/123",
-      "sms_body" to "Sandy Winchester sent you \$50"
-    )
+    // Pull out required parameters from DocumentSpec constructor
+    val documentSpecParametersByName =  documentSpecConstructor.parameters.associateBy { it.name }
 
-    // Zips the KParameters with corresponding parameter values
-    val parameters = parameterValues.filter {
-      parametersByName.containsKey(it.key)
-    }.mapKeys {
-      parametersByName[it.key] ?: throw BarberException(problems = listOf("Missing KParameter for ${it.key}"))
+    // Find missing fields in DocumentCopy
+    // Missing fields occur when a nullable field in DocumentSpec is not an included key in the DocumentCopy fields
+    // In the Parameters Map in the DocumentSpec constructor though, all parameter keys must be present (including
+    // nullable)
+    val missingFields = documentSpecParametersByName.filterKeys {
+      !it.isNullOrBlank() && !documentCopy.fields.containsKey(it)
     }
+
+    // Initialize keys for missing fields in DocumentCopy
+    val documentCopyFields: MutableMap<String, String?> = documentCopy.fields.toMutableMap()
+    missingFields.map { documentCopyFields.putIfAbsent(it.key!!, null) }
+
+    // Render each field of DocumentCopy with passed in CopyModel context
+    // Some of these fields now will be null since any missing fields will have been added with null values
+    val renderedDocumentCopyFields = documentCopyFields.mapValues {
+      when (it.value) {
+        null -> it.value
+        else -> BarberRender().render(it.value!!, copyModel)
+      }
+    }
+
+    // Zips the KParameters with corresponding rendered values from DocumentCopy
+    val parameters = renderedDocumentCopyFields.filter {
+      documentSpecParametersByName .containsKey(it.key)
+    }.mapKeys {
+      documentSpecParametersByName [it.key] ?: throw BarberException(problems = listOf("Missing KParameter for ${it.key}"))
+    }
+
+    // Build the DocumentSpec instance with the rendered DocumentCopy parameters
     return documentSpecConstructor.callBy(parameters)
   }
 

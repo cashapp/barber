@@ -1,4 +1,4 @@
-package com.squareup.barber
+package com.squareup.barber.models
 
 /**
  * This is a UI object that has the user-presented strings of a document.

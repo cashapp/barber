@@ -1,4 +1,4 @@
-package com.squareup.barber
+package com.squareup.barber.models
 
 /**
  * A {language code}-{country code} Locale

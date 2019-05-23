@@ -1,4 +1,4 @@
-package com.squareup.barber
+package com.squareup.barber.models
 
 import kotlin.reflect.KClass
 
