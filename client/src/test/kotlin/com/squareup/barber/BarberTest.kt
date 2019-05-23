@@ -23,7 +23,7 @@ class BarberTest {
       targets = setOf(TransactionalEmailDocumentSpec::class),
       locale = Locale.EN_US
     )
-    val barber = Barber()
+    val barber = BarberImpl()
     barber.installDocumentSpec<TransactionalEmailDocumentSpec>()
     barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
   }
@@ -42,7 +42,7 @@ class BarberTest {
       targets = setOf(TransactionalEmailDocumentSpec::class),
       locale = Locale.EN_US
     )
-    val barber = Barber()
+    val barber = BarberImpl()
     val exception = assertFailsWith<BarberException> {
       barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
     }
@@ -66,7 +66,7 @@ class BarberTest {
       targets = setOf(TransactionalEmailDocumentSpec::class),
       locale = Locale.EN_US
     )
-    val barber = Barber()
+    val barber = BarberImpl()
     barber.installDocumentSpec<TransactionalEmailDocumentSpec>()
     val exception = assertFailsWith<BarberException> {
       barber.installCopy<SenderReceipt>(recipientReceiptDocumentCopy)
@@ -101,7 +101,7 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    val barber = Barber()
+    val barber = BarberImpl()
     barber.installDocumentSpec<TransactionalSmsDocumentSpec>()
     barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
 
@@ -137,12 +137,10 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    val barber = Barber()
+    val barber = BarberImpl()
     barber.installDocumentSpec<TransactionalEmailDocumentSpec>()
     barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
 
-//    val specRenderer = barber.newSpecRenderer(RecipientReceipt::class, TransactionalEmailDocumentSpec::class)
-//    val spec = specRenderer.render(recipientReceipt)
     val spec = barber.render<TransactionalEmailDocumentSpec>(recipientReceipt)
 
     assertThat(spec).isEqualTo(
@@ -173,7 +171,7 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    val barber = Barber()
+    val barber = BarberImpl()
     val exception = assertFailsWith<BarberException> {
       barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
     }
@@ -202,7 +200,7 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    val barber = Barber()
+    val barber = BarberImpl()
     val exception = assertFailsWith<BarberException> {
       barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
     }
@@ -227,7 +225,7 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    val barber = Barber()
+    val barber = BarberImpl()
     val exception = assertFailsWith<BarberException> {
       barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
     }
@@ -252,11 +250,11 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    val barber = Barber()
+    val barber = BarberImpl()
     barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
 
     val exception = assertFailsWith<BarberException> {
-      barber.newSpecRenderer(SenderReceipt::class, TransactionalEmailDocumentSpec::class)
+      // TODO confirm failure when render (SenderReceipt::class, TransactionalEmailDocumentSpec::class)
     }
 
     assertThat(exception.problems).containsExactly("""
@@ -280,11 +278,11 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    val barber = Barber()
+    val barber = BarberImpl()
     barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
 
     val exception = assertFailsWith<BarberException> {
-      barber.newSpecRenderer(RecipientReceipt::class, SmsDocumentSpec::class)
+      // TODO confirm failure when render (RecipientReceipt::class, SmsDocumentSpec::class)
     }
 
     assertThat(exception.problems).containsExactly("""
