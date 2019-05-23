@@ -1,13 +1,22 @@
 package com.squareup.barber
 
 import com.squareup.barber.examples.TransactionalEmailDocumentSpec
+import com.squareup.barber.examples.TransactionalSmsDocumentSpec
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import kotlin.test.assertFailsWith
 
 class BarberTest {
+  lateinit var barber: Barber
+
+  @BeforeEach
+  fun beforeEach() {
+    barber = BarberImpl()
+  }
+
   @Test
   fun installCopy() {
     val recipientReceiptDocumentCopy = DocumentCopy(
@@ -22,7 +31,6 @@ class BarberTest {
       targets = setOf(TransactionalEmailDocumentSpec::class),
       locale = Locale.EN_US
     )
-    val barber = Barber()
     barber.installDocumentSpec<TransactionalEmailDocumentSpec>()
     barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
   }
@@ -41,7 +49,6 @@ class BarberTest {
       targets = setOf(TransactionalEmailDocumentSpec::class),
       locale = Locale.EN_US
     )
-    val barber = Barber()
     val exception = assertFailsWith<BarberException> {
       barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
     }
@@ -65,7 +72,6 @@ class BarberTest {
       targets = setOf(TransactionalEmailDocumentSpec::class),
       locale = Locale.EN_US
     )
-    val barber = Barber()
     barber.installDocumentSpec<TransactionalEmailDocumentSpec>()
     val exception = assertFailsWith<BarberException> {
       barber.installCopy<SenderReceipt>(recipientReceiptDocumentCopy)
@@ -76,8 +82,44 @@ class BarberTest {
       |CopyModel: class com.squareup.barber.SenderReceipt""".trimMargin())
   }
 
+  @Test
+  fun happyPathSms() {
+    val recipientReceipt = RecipientReceipt(
+      sender = "Sandy Winchester",
+      amount = "$50",
+      cancelUrl = "https://cash.app/cancel/123",
+      deposit_expected_at = Instant.parse("2019-05-21T16:02:00.00Z")
+    )
+
+    val recipientReceiptDocumentCopy = DocumentCopy(
+      fields = mapOf(
+        "subject" to "{sender} sent you {amount}",
+        "headline" to "You received {amount}",
+        "short_description" to "You’ve received a payment from {sender}! The money will be in your bank account " +
+          "{deposit_expected_at_casual}.",
+        "primary_button" to "Cancel this payment",
+        "primary_button_url" to "{cancelUrl}",
+        "sms_body" to "{sender} sent you {amount}"
+      ),
+      source = RecipientReceipt::class,
+      targets = setOf(TransactionalSmsDocumentSpec::class),
+      locale = Locale.EN_US
+    )
+
+    barber.installDocumentSpec<TransactionalSmsDocumentSpec>()
+    barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+
+    val spec = barber.render<TransactionalSmsDocumentSpec>(recipientReceipt)
+
+    assertThat(spec).isEqualTo(
+      TransactionalSmsDocumentSpec(
+        sms_body = "Sandy Winchester sent you $50"
+      )
+    )
+  }
+
   @Disabled @Test
-  fun happyPath() {
+  fun happyPathEmail() {
     val recipientReceipt = RecipientReceipt(
       sender = "Sandy Winchester",
       amount = "$50",
@@ -99,12 +141,10 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    val barber = Barber()
     barber.installDocumentSpec<TransactionalEmailDocumentSpec>()
     barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
 
-    val specRenderer = barber.newSpecRenderer(RecipientReceipt::class, TransactionalEmailDocumentSpec::class)
-    val spec = specRenderer.render(recipientReceipt)
+    val spec = barber.render<TransactionalEmailDocumentSpec>(recipientReceipt)
 
     assertThat(spec).isEqualTo(
       TransactionalEmailDocumentSpec(
@@ -134,7 +174,6 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    val barber = Barber()
     val exception = assertFailsWith<BarberException> {
       barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
     }
@@ -163,7 +202,6 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    val barber = Barber()
     val exception = assertFailsWith<BarberException> {
       barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
     }
@@ -188,7 +226,6 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    val barber = Barber()
     val exception = assertFailsWith<BarberException> {
       barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
     }
@@ -213,11 +250,10 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    val barber = Barber()
     barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
 
     val exception = assertFailsWith<BarberException> {
-      barber.newSpecRenderer(SenderReceipt::class, TransactionalEmailDocumentSpec::class)
+      // TODO confirm failure when render (SenderReceipt::class, TransactionalEmailDocumentSpec::class)
     }
 
     assertThat(exception.problems).containsExactly("""
@@ -241,11 +277,10 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    val barber = Barber()
     barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
 
     val exception = assertFailsWith<BarberException> {
-      barber.newSpecRenderer(RecipientReceipt::class, SmsDocumentSpec::class)
+      // TODO confirm failure when render (RecipientReceipt::class, SmsDocumentSpec::class)
     }
 
     assertThat(exception.problems).containsExactly("""
