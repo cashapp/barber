@@ -1,4 +1,4 @@
-package com.squareup.barber
+package com.squareup.barber.models
 
 /**
  * This is a schema that specifies the input values for a DocumentCopy template.

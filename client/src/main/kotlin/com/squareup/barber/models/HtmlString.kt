@@ -1,4 +1,4 @@
-package com.squareup.barber
+package com.squareup.barber.models
 
 /**
  * A wrapper around a String that contains HTML content that should not be escaped when rendered

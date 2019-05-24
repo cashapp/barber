@@ -1,5 +1,8 @@
 package com.squareup.barber
 
+import com.squareup.barber.models.CopyModel
+import com.squareup.barber.models.DocumentCopy
+import com.squareup.barber.models.DocumentSpec
 import kotlin.reflect.KClass
 
 /**
