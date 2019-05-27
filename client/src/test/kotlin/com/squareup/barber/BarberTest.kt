@@ -122,6 +122,40 @@ class BarberTest {
   }
 
   @Test
+  fun renderedSpecIsTypeSafeAndSpecific() {
+    val recipientReceipt = RecipientReceipt(
+      sender = "Sandy Winchester",
+      amount = "$50",
+      cancelUrl = "https://cash.app/cancel/123",
+      deposit_expected_at = Instant.parse("2019-05-21T16:02:00.00Z")
+    )
+
+    val recipientReceiptDocumentCopy = DocumentCopy(
+      fields = mapOf(
+        "sms_body" to "{{sender}} sent you {{amount}}"
+      ),
+      source = RecipientReceipt::class,
+      targets = setOf(TransactionalSmsDocumentSpec::class),
+      locale = Locale.EN_US
+    )
+
+    barber.installDocumentSpec<TransactionalSmsDocumentSpec>()
+    barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+
+    val spec = barber.render<TransactionalSmsDocumentSpec>(recipientReceipt)
+
+    // Spec matches
+    assertThat(spec).isEqualTo(
+      TransactionalSmsDocumentSpec(
+        sms_body = "Sandy Winchester sent you $50"
+      )
+    )
+
+    // Returned rendered spec is type safely accessible
+    assertThat(spec.sms_body).isEqualTo("Sandy Winchester sent you $50")
+  }
+
+  @Test
   fun happyPathEmail() {
     val recipientReceipt = RecipientReceipt(
       sender = "Sandy Winchester",

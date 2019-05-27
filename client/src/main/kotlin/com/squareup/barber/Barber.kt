@@ -14,7 +14,7 @@ interface Barber {
   /**
    * @return a [DocumentSpec] with the values of a [CopyModel] instance rendered in the [DocumentCopy] template
    */
-  fun render(copyModel: CopyModel, documentSpecClass: KClass<out DocumentSpec>): DocumentSpec
+  fun <D: DocumentSpec>render(copyModel: CopyModel, documentSpecClass: KClass<out D>): D
 
   /**
    * Consumes a [CopyModel] and corresponding [DocumentCopy] and persists in-memory
@@ -29,8 +29,7 @@ interface Barber {
   fun installDocumentSpec(documentSpec: KClass<out DocumentSpec>)
 }
 
-inline fun <reified D : DocumentSpec> Barber.render(copyModel: CopyModel): DocumentSpec = render(copyModel,
-  D::class)
+inline fun <reified D : DocumentSpec> Barber.render(copyModel: CopyModel): D = render(copyModel, D::class)
 
 inline fun <reified C : CopyModel> Barber.installCopy(documentCopy: DocumentCopy) = installCopy(C::class, documentCopy)
 
