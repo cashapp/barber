@@ -13,7 +13,7 @@ class BarberImpl : Barber {
   private val installedDocumentCopy: MutableMap<KClass<out CopyModel>, DocumentCopy> = mutableMapOf()
   private val installedDocumentSpec: MutableSet<KClass<out DocumentSpec>> = mutableSetOf()
 
-  override fun render(copyModel: CopyModel, documentSpecClass: KClass<out DocumentSpec>): DocumentSpec {
+  override fun <D : DocumentSpec> render(copyModel: CopyModel, documentSpecClass: KClass<out D>): D {
     // Lookup installed DocumentCopy that corresponds to CopyModel
     val copyModelClass = copyModel::class
     val documentCopy = installedDocumentCopy[copyModelClass] ?: throw BarberException(problems = listOf("""
