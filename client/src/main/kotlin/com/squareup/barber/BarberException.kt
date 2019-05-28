@@ -14,4 +14,11 @@ package com.squareup.barber
  */
 class BarberException(
   val problems: List<String>
-) : IllegalStateException()
+) : IllegalStateException() {
+  override fun toString(): String {
+    return """
+      |Problems
+      |${this.problems.mapIndexed { index, s -> "${index + 1}) $s\n" }.joinToString("\n")}
+    """.trimMargin()
+  }
+}
