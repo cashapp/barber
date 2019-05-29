@@ -38,5 +38,4 @@ class BarberExceptionTest {
       |
     """.trimMargin(), exception.toString())
   }
-
 }

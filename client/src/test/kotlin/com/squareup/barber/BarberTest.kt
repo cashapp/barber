@@ -6,20 +6,12 @@ import com.squareup.barber.models.CopyModel
 import com.squareup.barber.models.DocumentCopy
 import com.squareup.barber.models.Locale
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import kotlin.test.assertFailsWith
 
 class BarberTest {
-  lateinit var barber: Barber
-
-  @BeforeEach
-  fun before() {
-    barber = BarberImpl()
-  }
-
   @Test
   fun installCopy() {
     val recipientReceiptDocumentCopy = DocumentCopy(
@@ -34,8 +26,10 @@ class BarberTest {
       targets = setOf(TransactionalEmailDocumentSpec::class),
       locale = Locale.EN_US
     )
-    barber.installDocumentSpec<TransactionalEmailDocumentSpec>()
-    barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+    Barber.Builder()
+      .installDocumentSpec<TransactionalEmailDocumentSpec>()
+      .installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+      .build()
   }
 
   @Test
@@ -53,7 +47,9 @@ class BarberTest {
       locale = Locale.EN_US
     )
     val exception = assertFailsWith<BarberException> {
-      barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+      Barber.Builder()
+        .installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+        .build()
     }
     assertThat(exception.problems).containsExactly("""
       |Attempted to install DocumentCopy without the corresponding DocumentSpec being installed.
@@ -75,9 +71,10 @@ class BarberTest {
       targets = setOf(TransactionalEmailDocumentSpec::class),
       locale = Locale.EN_US
     )
-    barber.installDocumentSpec<TransactionalEmailDocumentSpec>()
+    val builder = Barber.Builder()
+      .installDocumentSpec<TransactionalEmailDocumentSpec>()
     val exception = assertFailsWith<BarberException> {
-      barber.installCopy<SenderReceipt>(recipientReceiptDocumentCopy)
+      builder.installCopy<SenderReceipt>(recipientReceiptDocumentCopy)
     }
     assertThat(exception.problems).containsExactly("""
       |Attempted to install DocumentCopy with a CopyModel not specific in the DocumentCopy source.
@@ -109,10 +106,13 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    barber.installDocumentSpec<TransactionalSmsDocumentSpec>()
-    barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+    val barber = Barber.Builder()
+      .installDocumentSpec<TransactionalSmsDocumentSpec>()
+      .installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+      .build()
 
-    val spec = barber.render<TransactionalSmsDocumentSpec>(recipientReceipt)
+    val spec = barber.newRenderer<RecipientReceipt, TransactionalSmsDocumentSpec>()
+      .render(recipientReceipt)
 
     assertThat(spec).isEqualTo(
       TransactionalSmsDocumentSpec(
@@ -139,10 +139,13 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    barber.installDocumentSpec<TransactionalSmsDocumentSpec>()
-    barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+    val barber = Barber.Builder()
+      .installDocumentSpec<TransactionalSmsDocumentSpec>()
+      .installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+      .build()
 
-    val spec = barber.render<TransactionalSmsDocumentSpec>(recipientReceipt)
+    val spec = barber.newRenderer<RecipientReceipt, TransactionalSmsDocumentSpec>()
+      .render(recipientReceipt)
 
     // Spec matches
     assertThat(spec).isEqualTo(
@@ -178,10 +181,13 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    barber.installDocumentSpec<TransactionalEmailDocumentSpec>()
-    barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+    val barber = Barber.Builder()
+      .installDocumentSpec<TransactionalEmailDocumentSpec>()
+      .installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+      .build()
 
-    val spec = barber.render<TransactionalEmailDocumentSpec>(recipientReceipt)
+    val spec = barber.newRenderer<RecipientReceipt, TransactionalEmailDocumentSpec>()
+      .render(recipientReceipt)
 
     assertThat(spec).isEqualTo(
       TransactionalEmailDocumentSpec(
@@ -219,10 +225,13 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    barber.installDocumentSpec<TransactionalEmailDocumentSpec>()
-    barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+    val barber = Barber.Builder()
+      .installDocumentSpec<TransactionalEmailDocumentSpec>()
+      .installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+      .build()
 
-    val spec = barber.render<TransactionalEmailDocumentSpec>(recipientReceipt)
+    val spec = barber.newRenderer<RecipientReceipt, TransactionalEmailDocumentSpec>()
+      .render(recipientReceipt)
 
     assertThat(spec).isEqualTo(
       TransactionalEmailDocumentSpec(
@@ -254,7 +263,8 @@ class BarberTest {
     )
 
     val exception = assertFailsWith<BarberException> {
-      barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+      Barber.Builder()
+        .installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
     }
     assertThat(exception.problems).containsExactly("""
         |output field 'subject' uses 'totally_invalid_field' but 'RecipientReceipt' has no such field
@@ -282,7 +292,8 @@ class BarberTest {
     )
 
     val exception = assertFailsWith<BarberException> {
-      barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+      Barber.Builder()
+        .installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
     }
     assertThat(exception.problems).containsExactly("""
         |output field 'short_description' is required but was not found
@@ -306,7 +317,8 @@ class BarberTest {
     )
 
     val exception = assertFailsWith<BarberException> {
-      barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+      Barber.Builder()
+        .installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
     }
     assertThat(exception.problems).containsExactly("""
         |output field 'tertiary_button_url' is not used
@@ -329,7 +341,8 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+    Barber.Builder()
+      .installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
 
     val exception = assertFailsWith<BarberException> {
       // TODO confirm failure when render (SenderReceipt::class, TransactionalEmailDocumentSpec::class)
@@ -356,7 +369,8 @@ class BarberTest {
       locale = Locale.EN_US
     )
 
-    barber.installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+    Barber.Builder()
+      .installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
 
     val exception = assertFailsWith<BarberException> {
       // TODO confirm failure when render (RecipientReceipt::class, SmsDocumentSpec::class)
