@@ -31,7 +31,7 @@ ext.dep = [
   "mockitoKotlin": "com.nhaarman:mockito-kotlin:1.5.0",
   "moshi": "com.squareup.moshi:moshi-kotlin:1.8.0",
   "mustacheCompiler": "com.github.spullara.mustache.java:compiler:0.9.5",
-  "mysql": "mysql:mysql-connector-java:5.1.47",
+  "mysql": "mysql:mysql-connector-java:8.0.16",
   "okHttp": "com.squareup.okhttp3:okhttp:3.12.1",
   "okio": "com.squareup.okio:okio:2.2.2",
   "openTracing": "io.opentracing:opentracing-api:0.31.0",
