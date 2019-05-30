@@ -45,7 +45,7 @@ ext.dep = [
   "tracingJaeger": "com.uber.jaeger:jaeger-core:0.24.0",
   "wireCompiler": "com.squareup.wire:wire-compiler:3.0.0-square09",
   "wireMoshiAdapter": "com.squareup.wire:wire-moshi-adapter:3.0.0-alpha01",
-  "wireRuntime": "com.squareup.wire:wire-runtime:2.3.0-RC1",
+  "wireRuntime": "com.squareup.wire:wire-runtime:3.0.0-alpha01",
   "wireSchema": "com.squareup.wire:wire-schema:2.3.0-RC1",
 ]
 //Generated from polyrepo's master-dependencies.json
