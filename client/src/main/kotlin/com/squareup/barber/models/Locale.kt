@@ -21,4 +21,6 @@ data class Locale(
   companion object {
     val EN_US = Locale("en", "US")
   }
+
+  //TODO add resolve algorithm with fallbacks
 }

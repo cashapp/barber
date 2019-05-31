@@ -14,24 +14,20 @@ internal class RealBarber(val installedDocumentCopy: Map<KClass<out CopyModel>, 
     // Lookup installed DocumentCopy that corresponds to CopyModel
     val documentCopy: DocumentCopy = installedDocumentCopy[copyModelClass] ?: throw BarberException(
       problems = listOf("""
-    |Attempted to render with DocumentCopy that has not been installed for CopyModel: $copyModelClass.
-  """.trimMargin()))
+      |Attempted to render with DocumentCopy that has not been installed for CopyModel: $copyModelClass.
+    """.trimMargin()))
 
     // Confirm that output DocumentSpec is a valid target for the DocumentCopy
     if (!documentCopy.targets.contains(documentSpecClass)) {
       throw BarberException(problems = listOf("""
-      |Specified target $documentSpecClass not a valid target for CopyModel's corresponding DocumentCopy.
-      |Valid targets:
-      |${documentCopy.targets}
-    """.trimMargin()))
+        |Specified target $documentSpecClass not a valid target for CopyModel's corresponding DocumentCopy.
+        |Valid targets:
+        |${documentCopy.targets}
+      """.trimMargin()))
     }
 
-    // TODO move the "No primary constructor" exception to validate on install instead of here
-    // Validate that DocumentSpec has a Primary Constructor
-    val documentSpecConstructor = documentSpecClass.primaryConstructor ?: throw BarberException(
-      problems = listOf("No primary constructor for DocumentSpec class $documentSpecClass."))
-
     // Pull out required parameters from DocumentSpec constructor
+    val documentSpecConstructor = documentSpecClass.primaryConstructor!!
     val documentSpecParametersByName = documentSpecConstructor.parameters.associateBy { it.name }
 
     // Find missing fields in DocumentCopy
@@ -47,5 +43,14 @@ internal class RealBarber(val installedDocumentCopy: Map<KClass<out CopyModel>, 
     missingFields.map { documentCopyFields.putIfAbsent(it.key!!, null) }
 
     return RealRenderer(documentSpecConstructor, documentSpecParametersByName, documentCopyFields)
+  }
+
+  override fun getAllRenderers(): LinkedHashMap<RendererKey, Renderer<*, *>> {
+    val renderers: LinkedHashMap<RendererKey, Renderer<*,*>> = linkedMapOf()
+    for (entry in installedDocumentCopy) {
+      val documentCopy = entry.value
+      documentCopy.targets.forEach { renderers[RendererKey(documentCopy.source, it)] = newRenderer(documentCopy.source, it) }
+    }
+    return renderers
   }
 }
