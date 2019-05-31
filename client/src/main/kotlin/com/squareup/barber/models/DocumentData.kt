@@ -24,7 +24,7 @@ package com.squareup.barber.models
  *
  * Instances of DocumentData are used to fill the templates in a DocumentTemplate and produce a Document object.
  *
- * A SpecRenderer function consumes the Document object and renders the final document, SMS, email, or article.
+ * A Barber.render function consumes the Document object and renders the final document, SMS, email, or article.
  *
  * Copy models do not have a locale.
  */
