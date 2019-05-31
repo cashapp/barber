@@ -9,10 +9,10 @@ import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Test
 import kotlin.test.assertFailsWith
 
-class BarberTest {
+class BarbershopTest {
   @Test
   fun `Install works`() {
-    Barber.Builder()
+    BarbershopBuilder()
       .installDocument<TransactionalSmsDocument>()
       .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplate)
       .build()
@@ -20,7 +20,7 @@ class BarberTest {
 
   @Test
   fun `Install works regardless of order`() {
-    Barber.Builder()
+    BarbershopBuilder()
       .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplate)
       .installDocument<TransactionalSmsDocument>()
       .build()
@@ -29,7 +29,7 @@ class BarberTest {
   @Test
   fun `Fails when DocumentTemplate targets are not installed Documents`() {
     val exception = assertFailsWith<BarberException> {
-      Barber.Builder()
+      BarbershopBuilder()
         .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplate)
         .build()
     }
@@ -41,7 +41,7 @@ class BarberTest {
 
   @Test
   fun `Fails when DocumentTemplate installed with non-source DocumentData`() {
-    val builder = Barber.Builder()
+    val builder = BarbershopBuilder()
       .installDocument<TransactionalEmailDocument>()
     val exception = assertFailsWith<BarberException> {
       builder

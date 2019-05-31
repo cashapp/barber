@@ -1,56 +1,48 @@
 package com.squareup.barber
 
+import com.github.mustachejava.DefaultMustacheFactory
 import com.squareup.barber.models.DocumentData
-import com.squareup.barber.models.DocumentTemplate
 import com.squareup.barber.models.Document
-import kotlin.reflect.KClass
-import kotlin.reflect.full.primaryConstructor
+import java.io.StringReader
+import java.io.StringWriter
+import kotlin.reflect.KFunction
+import kotlin.reflect.KParameter
 
-internal class RealBarber(val installedDocumentTemplate: Map<KClass<out DocumentData>, DocumentTemplate>) : Barber {
-  override fun <C : DocumentData, D : Document> newRenderer(
-    documentDataClass: KClass<out C>,
-    documentClass: KClass<out D>
-  ): Renderer<C, D> {
-    // Lookup installed DocumentTemplate that corresponds to DocumentData
-    val documentTemplate: DocumentTemplate = installedDocumentTemplate[documentDataClass] ?: throw BarberException(
-      problems = listOf("""
-      |Attempted to render with DocumentTemplate that has not been installed for DocumentData: $documentDataClass.
-    """.trimMargin()))
-
-    // Confirm that output Document is a valid target for the DocumentTemplate
-    if (!documentTemplate.targets.contains(documentClass)) {
-      throw BarberException(problems = listOf("""
-        |Specified target $documentClass not a valid target for DocumentData's corresponding DocumentTemplate.
-        |Valid targets:
-        |${documentTemplate.targets}
-      """.trimMargin()))
+class RealBarber<C : DocumentData, D : Document>(
+  private val documentConstructor: KFunction<D>,
+  private val documentParametersByName: Map<String?, KParameter>,
+  private val documentTemplateFields: Map<String, String?>
+) : Barber<C, D> {
+  override fun render(documentData: C): D {
+    // Render each field of DocumentTemplate with passed in DocumentData context
+    // Some of these fields now will be null since any missing fields will have been added with null values
+    val renderedDocumentDataFields = documentTemplateFields.mapValues {
+      when (it.value) {
+        null -> it.value
+        else -> renderMustache(it.value!!, documentData)
+      }
     }
 
-    // Pull out required parameters from Document constructor
-    val documentConstructor = documentClass.primaryConstructor!!
-    val documentParametersByName = documentConstructor.parameters.associateBy { it.name }
-
-    // Find missing fields in DocumentTemplate
-    // Missing fields occur when a nullable field in Document is not an included key in the DocumentTemplate fields
-    // In the Parameters Map in the Document constructor though, all parameter keys must be present (including
-    // nullable)
-    val missingFields = documentParametersByName.filterKeys {
-      !it.isNullOrBlank() && !documentTemplate.fields.containsKey(it)
+    // Zips the KParameters with corresponding rendered values from DocumentTemplate
+    val parameters = renderedDocumentDataFields.filter {
+      documentParametersByName .containsKey(it.key)
+    }.mapKeys {
+      documentParametersByName.getValue(it.key)
     }
 
-    // Initialize keys for missing fields in DocumentTemplate
-    val documentDataFields: MutableMap<String, String?> = documentTemplate.fields.toMutableMap()
-    missingFields.map { documentDataFields.putIfAbsent(it.key!!, null) }
-
-    return RealRenderer(documentConstructor, documentParametersByName, documentDataFields)
+    // Build the Document instance with the rendered DocumentTemplate parameters
+    return documentConstructor.callBy(parameters)
   }
 
-  override fun getAllRenderers(): LinkedHashMap<RendererKey, Renderer<*, *>> {
-    val renderers: LinkedHashMap<RendererKey, Renderer<*,*>> = linkedMapOf()
-    for (entry in installedDocumentTemplate) {
-      val documentData = entry.value
-      documentData.targets.forEach { renderers[RendererKey(documentData.source, it)] = newRenderer(documentData.source, it) }
+  companion object {
+    private val mustacheFactory = DefaultMustacheFactory()
+    // TODO split off compile and execute functions to allow for precompilation on install of DocumentTemplate
+    fun renderMustache(mustacheTemplate: String, documentData: DocumentData): String {
+      val writer = StringWriter()
+      val compiledMustache = mustacheFactory.compile(StringReader(mustacheTemplate), mustacheTemplate)
+      compiledMustache.execute(writer, documentData)
+      writer.flush()
+      return writer.toString()
     }
-    return renderers
   }
 }

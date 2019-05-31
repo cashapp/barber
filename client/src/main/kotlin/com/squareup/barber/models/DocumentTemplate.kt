@@ -11,7 +11,7 @@ import kotlin.reflect.KClass
  * @param [fields] Map of a Document output key to a template String value that can contain DocumentData input values
  * @param [source] KClass of DocumentData
  * @param [targets] Set of Documents that DocumentTemplate can render to
- * @param [locale] Barber.Locale that scopes DocumentTemplate to a languages/country Locale
+ * @param [locale] Barbershop.Locale that scopes DocumentTemplate to a languages/country Locale
  */
 data class DocumentTemplate(
   val fields: Map<String, String>,
