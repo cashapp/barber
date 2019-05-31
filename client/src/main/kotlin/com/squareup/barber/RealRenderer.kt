@@ -27,8 +27,7 @@ class RealRenderer<C : CopyModel, D : DocumentSpec>(
     val parameters = renderedDocumentCopyFields.filter {
       documentSpecParametersByName .containsKey(it.key)
     }.mapKeys {
-      documentSpecParametersByName [it.key] ?: throw BarberException(
-        problems = listOf("Missing KParameter for ${it.key}"))
+      documentSpecParametersByName.getValue(it.key)
     }
 
     // Build the DocumentSpec instance with the rendered DocumentCopy parameters
