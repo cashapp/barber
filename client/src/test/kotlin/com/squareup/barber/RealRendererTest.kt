@@ -1,9 +1,7 @@
 package com.squareup.barber
 
 import com.squareup.barber.RealRenderer.Companion.renderMustache
-import com.squareup.barber.models.CopyModel
-import com.squareup.barber.models.DocumentSpec
-import org.junit.jupiter.api.BeforeEach
+import com.squareup.barber.models.DocumentData
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
@@ -19,5 +17,5 @@ class RealRendererTest {
 
   data class Person (
     val name: String
-  ): CopyModel
+  ): DocumentData
 }

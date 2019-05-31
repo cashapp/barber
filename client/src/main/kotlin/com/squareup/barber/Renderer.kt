@@ -1,11 +1,11 @@
 package com.squareup.barber
 
-import com.squareup.barber.models.CopyModel
-import com.squareup.barber.models.DocumentSpec
+import com.squareup.barber.models.DocumentData
+import com.squareup.barber.models.Document
 
-interface Renderer<C : CopyModel, D : DocumentSpec> {
+interface Renderer<C : DocumentData, D : Document> {
   /**
-   * @return a [DocumentSpec] with the values of a [CopyModel] instance rendered in the [DocumentCopy] template
+   * @return a [Document] with the values of a [DocumentData] instance rendered in the [DocumentTemplate]
    */
-  fun render(copyModel: C): D
+  fun render(documentData: C): D
 }

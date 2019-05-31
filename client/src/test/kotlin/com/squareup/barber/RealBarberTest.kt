@@ -1,33 +1,31 @@
 package com.squareup.barber
 
 import com.squareup.barber.examples.RecipientReceipt
-import com.squareup.barber.examples.SenderReceipt
-import com.squareup.barber.examples.TransactionalEmailDocumentSpec
-import com.squareup.barber.examples.TransactionalSmsDocumentSpec
-import com.squareup.barber.examples.recipientReceiptSmsDocumentCopy
+import com.squareup.barber.examples.TransactionalEmailDocument
+import com.squareup.barber.examples.TransactionalSmsDocument
+import com.squareup.barber.examples.recipientReceiptSmsDocumentTemplate
 import com.squareup.barber.examples.sandy50Receipt
-import com.squareup.barber.models.CopyModel
-import com.squareup.barber.models.DocumentCopy
+import com.squareup.barber.models.DocumentData
+import com.squareup.barber.models.DocumentTemplate
 import com.squareup.barber.models.Locale
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
-import java.time.Instant
 import kotlin.test.assertFailsWith
 
 class RealBarberTest {
   @Test
   fun happyPathSms() {
     val barber = Barber.Builder()
-      .installDocumentSpec<TransactionalSmsDocumentSpec>()
-      .installCopy<RecipientReceipt>(recipientReceiptSmsDocumentCopy)
+      .installDocument<TransactionalSmsDocument>()
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplate)
       .build()
 
-    val spec = barber.newRenderer<RecipientReceipt, TransactionalSmsDocumentSpec>()
+    val spec = barber.newRenderer<RecipientReceipt, TransactionalSmsDocument>()
       .render(sandy50Receipt)
 
     assertThat(spec).isEqualTo(
-      TransactionalSmsDocumentSpec(
+      TransactionalSmsDocument(
         sms_body = "Sandy Winchester sent you $50"
       )
     )
@@ -36,16 +34,16 @@ class RealBarberTest {
   @Test
   fun renderedSpecIsTypeSafeAndSpecific() {
     val barber = Barber.Builder()
-      .installDocumentSpec<TransactionalSmsDocumentSpec>()
-      .installCopy<RecipientReceipt>(recipientReceiptSmsDocumentCopy)
+      .installDocument<TransactionalSmsDocument>()
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplate)
       .build()
 
-    val spec = barber.newRenderer<RecipientReceipt, TransactionalSmsDocumentSpec>()
+    val spec = barber.newRenderer<RecipientReceipt, TransactionalSmsDocument>()
       .render(sandy50Receipt)
 
     // Spec matches
     assertThat(spec).isEqualTo(
-      TransactionalSmsDocumentSpec(
+      TransactionalSmsDocument(
         sms_body = "Sandy Winchester sent you $50"
       )
     )
@@ -56,7 +54,7 @@ class RealBarberTest {
 
   @Test
   fun happyPathEmail() {
-    val recipientReceiptDocumentCopy = DocumentCopy(
+    val recipientReceiptDocumentData = DocumentTemplate(
       fields = mapOf(
         "subject" to "{{sender}} sent you {{amount}}",
         "headline" to "You received {{amount}}",
@@ -66,20 +64,20 @@ class RealBarberTest {
         "primary_button_url" to "{{cancelUrl}}"
       ),
       source = RecipientReceipt::class,
-      targets = setOf(TransactionalEmailDocumentSpec::class),
+      targets = setOf(TransactionalEmailDocument::class),
       locale = Locale.EN_US
     )
 
     val barber = Barber.Builder()
-      .installDocumentSpec<TransactionalEmailDocumentSpec>()
-      .installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+      .installDocument<TransactionalEmailDocument>()
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptDocumentData)
       .build()
 
-    val spec = barber.newRenderer<RecipientReceipt, TransactionalEmailDocumentSpec>()
+    val spec = barber.newRenderer<RecipientReceipt, TransactionalEmailDocument>()
       .render(sandy50Receipt)
 
     assertThat(spec).isEqualTo(
-      TransactionalEmailDocumentSpec(
+      TransactionalEmailDocument(
         subject = "Sandy Winchester sent you $50",
         headline = "You received $50",
         short_description = "You’ve received a payment from Sandy Winchester! The money will be in your bank account 2019-05-21T16:02:00Z.",
@@ -94,15 +92,15 @@ class RealBarberTest {
   @Disabled @Test
   fun fieldStemming() {
     val barber = Barber.Builder()
-      .installDocumentSpec<TransactionalEmailDocumentSpec>()
-      .installCopy<RecipientReceipt>(recipientReceiptSmsDocumentCopy)
+      .installDocument<TransactionalEmailDocument>()
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplate)
       .build()
 
-    val spec = barber.newRenderer<RecipientReceipt, TransactionalEmailDocumentSpec>()
+    val spec = barber.newRenderer<RecipientReceipt, TransactionalEmailDocument>()
       .render(sandy50Receipt)
 
     assertThat(spec).isEqualTo(
-      TransactionalEmailDocumentSpec(
+      TransactionalEmailDocument(
         subject = "Sandy Winchester sent you $50",
         headline = "You received $50",
         short_description = "You’ve received a payment from Sandy Winchester! The money will be in your bank account " +
@@ -117,7 +115,7 @@ class RealBarberTest {
 
   @Disabled @Test
   fun copyUsesFieldThatDoesntExist() {
-    val recipientReceiptDocumentCopy = DocumentCopy(
+    val recipientReceiptDocumentData = DocumentTemplate(
       fields = mapOf(
         "subject" to "{{sender}} sent you {{totally_invalid_field}}",
         "headline" to "",
@@ -126,13 +124,13 @@ class RealBarberTest {
         "primary_button_url" to ""
       ),
       source = RecipientReceipt::class,
-      targets = setOf(TransactionalEmailDocumentSpec::class),
+      targets = setOf(TransactionalEmailDocument::class),
       locale = Locale.EN_US
     )
 
     val exception = assertFailsWith<BarberException> {
       Barber.Builder()
-        .installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptDocumentData)
     }
     assertThat(exception.problems).containsExactly("""
         |output field 'subject' uses 'totally_invalid_field' but 'RecipientReceipt' has no such field
@@ -142,12 +140,12 @@ class RealBarberTest {
     )
   }
 
-  // TODO: name the input fields ('sender', 'amount' etc.) that the CopyModel defines
+  // TODO: name the input fields ('sender', 'amount' etc.) that the DocumentData defines
   // TODO: name the output fields ('subject', 'headline' etc.) that the DocuemntSpec has
 
   @Disabled @Test
   fun copyDoesntOutputFieldThatIsRequired() {
-    val recipientReceiptDocumentCopy = DocumentCopy(
+    val recipientReceiptDocumentData = DocumentTemplate(
       fields = mapOf(
         "subject" to "",
         "headline" to "",
@@ -155,13 +153,13 @@ class RealBarberTest {
         "primary_button_url" to ""
       ),
       source = RecipientReceipt::class,
-      targets = setOf(TransactionalEmailDocumentSpec::class),
+      targets = setOf(TransactionalEmailDocument::class),
       locale = Locale.EN_US
     )
 
     val exception = assertFailsWith<BarberException> {
       Barber.Builder()
-        .installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptDocumentData)
     }
     assertThat(exception.problems).containsExactly("""
         |output field 'short_description' is required but was not found
@@ -171,7 +169,7 @@ class RealBarberTest {
 
   @Disabled @Test
   fun copyOutputsFieldThatIsUnknown() {
-    val recipientReceiptDocumentCopy = DocumentCopy(
+    val recipientReceiptDocumentData = DocumentTemplate(
       fields = mapOf(
         "subject" to "",
         "headline" to "",
@@ -180,13 +178,13 @@ class RealBarberTest {
         "tertiary_button_url" to ""
       ),
       source = RecipientReceipt::class,
-      targets = setOf(TransactionalEmailDocumentSpec::class),
+      targets = setOf(TransactionalEmailDocument::class),
       locale = Locale.EN_US
     )
 
     val exception = assertFailsWith<BarberException> {
       Barber.Builder()
-        .installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptDocumentData)
     }
     assertThat(exception.problems).containsExactly("""
         |output field 'tertiary_button_url' is not used
@@ -195,8 +193,8 @@ class RealBarberTest {
   }
 
   @Disabled @Test
-  fun renderUnknownCopyModel() {
-    val recipientReceiptDocumentCopy = DocumentCopy(
+  fun renderUnknownDocumentData() {
+    val recipientReceiptDocumentData = DocumentTemplate(
       fields = mapOf(
         "subject" to "",
         "headline" to "",
@@ -205,15 +203,15 @@ class RealBarberTest {
         "primary_button_url" to ""
       ),
       source = RecipientReceipt::class,
-      targets = setOf(TransactionalEmailDocumentSpec::class),
+      targets = setOf(TransactionalEmailDocument::class),
       locale = Locale.EN_US
     )
 
     Barber.Builder()
-      .installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptDocumentData)
 
     val exception = assertFailsWith<BarberException> {
-      // TODO confirm failure when render (SenderReceipt::class, TransactionalEmailDocumentSpec::class)
+      // TODO confirm failure when render (SenderReceipt::class, TransactionalEmailDocument::class)
     }
 
     assertThat(exception.problems).containsExactly("""
@@ -223,8 +221,8 @@ class RealBarberTest {
   }
 
   @Disabled @Test
-  fun renderUnknownDocumentSpec() {
-    val recipientReceiptDocumentCopy = DocumentCopy(
+  fun renderUnknownDocument() {
+    val recipientReceiptDocumentData = DocumentTemplate(
       fields = mapOf(
         "subject" to "",
         "headline" to "",
@@ -233,33 +231,33 @@ class RealBarberTest {
         "primary_button_url" to ""
       ),
       source = RecipientReceipt::class,
-      targets = setOf(TransactionalEmailDocumentSpec::class),
+      targets = setOf(TransactionalEmailDocument::class),
       locale = Locale.EN_US
     )
 
     Barber.Builder()
-      .installCopy<RecipientReceipt>(recipientReceiptDocumentCopy)
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptDocumentData)
 
     val exception = assertFailsWith<BarberException> {
-      // TODO confirm failure when render (RecipientReceipt::class, SmsDocumentSpec::class)
+      // TODO confirm failure when render (RecipientReceipt::class, SmsDocument::class)
     }
 
     assertThat(exception.problems).containsExactly("""
-        |unknown document spec: SmsDocumentSpec
+        |unknown document: SmsDocument
         |""".trimMargin()
     )
   }
 
   @Disabled @Test
-  fun singleDocumentCopyHasMultipleTargets() {
+  fun singleDocumentDataHasMultipleTargets() {
     TODO()
   }
 
   @Disabled @Test
   fun failOnSingleUnit() {
-    data class StrangeUnitCopyModel(
+    data class StrangeUnitDocumentData(
       val strange: Unit
-    ) : CopyModel
+    ) : DocumentData
 
     TODO()
   }

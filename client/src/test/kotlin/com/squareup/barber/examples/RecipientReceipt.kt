@@ -1,6 +1,6 @@
 package com.squareup.barber.examples
 
-import com.squareup.barber.models.CopyModel
+import com.squareup.barber.models.DocumentData
 import java.time.Instant
 
 data class RecipientReceipt(
@@ -8,7 +8,7 @@ data class RecipientReceipt(
   val amount: String, // TODO: Money
   val cancelUrl: String, // TODO: HttpUrl
   val deposit_expected_at: Instant
-) : CopyModel
+) : DocumentData
 
 val sandy50Receipt = RecipientReceipt(
   sender = "Sandy Winchester",

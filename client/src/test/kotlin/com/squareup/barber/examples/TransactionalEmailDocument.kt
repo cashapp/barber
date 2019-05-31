@@ -1,13 +1,12 @@
 package com.squareup.barber.examples
 
-import com.squareup.barber.models.DocumentSpec
+import com.squareup.barber.models.Document
 
-// TODO: this does not belong in main
 // TODO: support HTMLString type
 /**
- * An example DocumentSpec
+ * An example Document
  */
-data class TransactionalEmailDocumentSpec(
+data class TransactionalEmailDocument(
   val subject: String,
   val headline: String,
   val short_description: String,
@@ -15,4 +14,4 @@ data class TransactionalEmailDocumentSpec(
   val primary_button_url: String?,
   val secondary_button: String?,
   val secondary_button_url: String?
-) : DocumentSpec
+) : Document
