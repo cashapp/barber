@@ -1,10 +1,10 @@
 package com.squareup.barber
 
-import com.squareup.barber.models.CopyModel
-import com.squareup.barber.models.DocumentSpec
+import com.squareup.barber.models.DocumentData
+import com.squareup.barber.models.Document
 import kotlin.reflect.KClass
 
 data class RendererKey (
-  val copyModel: KClass<out CopyModel>,
-  val documentSpec: KClass<out DocumentSpec>
+  val documentData: KClass<out DocumentData>,
+  val document: KClass<out Document>
 )

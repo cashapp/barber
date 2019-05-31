@@ -10,7 +10,7 @@ package com.squareup.barber
  * |  valid fields are [sender, amount, cancelUrl, deposit_expected_at]
  *
  * TODO make exceptions typed so the above example could be parsed by a client and show rich feedback
- *  for DocumentCopy writers
+ *  for DocumentTemplate writers
  */
 class BarberException(
   val problems: List<String>

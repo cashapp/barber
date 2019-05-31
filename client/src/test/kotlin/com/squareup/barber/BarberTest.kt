@@ -2,9 +2,9 @@ package com.squareup.barber
 
 import com.squareup.barber.examples.RecipientReceipt
 import com.squareup.barber.examples.SenderReceipt
-import com.squareup.barber.examples.TransactionalEmailDocumentSpec
-import com.squareup.barber.examples.TransactionalSmsDocumentSpec
-import com.squareup.barber.examples.recipientReceiptSmsDocumentCopy
+import com.squareup.barber.examples.TransactionalEmailDocument
+import com.squareup.barber.examples.TransactionalSmsDocument
+import com.squareup.barber.examples.recipientReceiptSmsDocumentTemplate
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Test
 import kotlin.test.assertFailsWith
@@ -13,44 +13,44 @@ class BarberTest {
   @Test
   fun `Install works`() {
     Barber.Builder()
-      .installDocumentSpec<TransactionalSmsDocumentSpec>()
-      .installCopy<RecipientReceipt>(recipientReceiptSmsDocumentCopy)
+      .installDocument<TransactionalSmsDocument>()
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplate)
       .build()
   }
 
   @Test
   fun `Install works regardless of order`() {
     Barber.Builder()
-      .installCopy<RecipientReceipt>(recipientReceiptSmsDocumentCopy)
-      .installDocumentSpec<TransactionalSmsDocumentSpec>()
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplate)
+      .installDocument<TransactionalSmsDocument>()
       .build()
   }
 
   @Test
-  fun `Fails when DocumentCopy targets are not installed DocumentSpecs`() {
+  fun `Fails when DocumentTemplate targets are not installed Documents`() {
     val exception = assertFailsWith<BarberException> {
       Barber.Builder()
-        .installCopy<RecipientReceipt>(recipientReceiptSmsDocumentCopy)
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplate)
         .build()
     }
     Assertions.assertThat(exception.problems).containsExactly("""
-      |Attempted to install DocumentCopy without the corresponding DocumentSpec being installed.
-      |Not installed DocumentCopy.targets:
-      |[class com.squareup.barber.examples.TransactionalSmsDocumentSpec]""".trimMargin())
+      |Attempted to install DocumentTemplate without the corresponding Document being installed.
+      |Not installed DocumentTemplate.targets:
+      |[class com.squareup.barber.examples.TransactionalSmsDocument]""".trimMargin())
   }
 
   @Test
-  fun `Fails when DocumentCopy installed with non-source CopyModel`() {
+  fun `Fails when DocumentTemplate installed with non-source DocumentData`() {
     val builder = Barber.Builder()
-      .installDocumentSpec<TransactionalEmailDocumentSpec>()
+      .installDocument<TransactionalEmailDocument>()
     val exception = assertFailsWith<BarberException> {
       builder
-        .installCopy<SenderReceipt>(recipientReceiptSmsDocumentCopy)
+        .installDocumentTemplate<SenderReceipt>(recipientReceiptSmsDocumentTemplate)
         .build()
     }
     Assertions.assertThat(exception.problems).containsExactly("""
-      |Attempted to install DocumentCopy with a CopyModel not specific in the DocumentCopy source.
-      |DocumentCopy.source: class com.squareup.barber.examples.RecipientReceipt
-      |CopyModel: class com.squareup.barber.examples.SenderReceipt""".trimMargin())
+      |Attempted to install DocumentTemplate with a DocumentData not specific in the DocumentTemplate source.
+      |DocumentTemplate.source: class com.squareup.barber.examples.RecipientReceipt
+      |DocumentData: class com.squareup.barber.examples.SenderReceipt""".trimMargin())
   }
 }

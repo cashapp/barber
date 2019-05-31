@@ -1,9 +1,9 @@
 package com.squareup.barber.examples
 
-import com.squareup.barber.models.DocumentCopy
+import com.squareup.barber.models.DocumentTemplate
 import com.squareup.barber.models.Locale
 
-val recipientReceiptSmsDocumentCopy = DocumentCopy(
+val recipientReceiptSmsDocumentTemplate = DocumentTemplate(
   fields = mapOf(
     "subject" to "{{sender}} sent you {{amount}}",
     "headline" to "You received {{amount}}",
@@ -14,6 +14,6 @@ val recipientReceiptSmsDocumentCopy = DocumentCopy(
     "sms_body" to "{{sender}} sent you {{amount}}"
   ),
   source = RecipientReceipt::class,
-  targets = setOf(TransactionalSmsDocumentSpec::class),
+  targets = setOf(TransactionalSmsDocument::class),
   locale = Locale.EN_US
 )

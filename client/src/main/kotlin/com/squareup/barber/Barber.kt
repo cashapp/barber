@@ -1,109 +1,109 @@
 package com.squareup.barber
 
-import com.squareup.barber.models.CopyModel
-import com.squareup.barber.models.DocumentCopy
-import com.squareup.barber.models.DocumentSpec
+import com.squareup.barber.models.DocumentData
+import com.squareup.barber.models.DocumentTemplate
+import com.squareup.barber.models.Document
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
 
 /**
- * 1) Keeps the installed [CopyModel], [DocumentCopy], and [DocumentSpec] in memory
- * 2) Provides a render method to generate [DocumentSpec] from [DocumentCopy] template and [CopyModel] values
+ * 1) Keeps the installed [DocumentData], [DocumentTemplate], and [Document] in memory
+ * 2) Provides a render method to generate [Document] from [DocumentTemplate] template and [DocumentData] values
  */
 interface Barber {
-  fun <C : CopyModel, D : DocumentSpec> newRenderer(
-    copyModelClass: KClass<out C>,
-    documentSpecClass: KClass<out D>
+  fun <C : DocumentData, D : Document> newRenderer(
+    documentDataClass: KClass<out C>,
+    documentClass: KClass<out D>
   ): Renderer<C, D>
 
   fun getAllRenderers(): LinkedHashMap<RendererKey, Renderer<*, *>>
 
   class Builder {
-    private val installedCopyModel: MutableSet<KClass<out CopyModel>> = mutableSetOf()
-    private val installedDocumentCopy: MutableMap<KClass<out CopyModel>, DocumentCopy> = mutableMapOf()
-    private val installedDocumentSpec: MutableSet<KClass<out DocumentSpec>> = mutableSetOf()
+    private val installedDocumentData: MutableSet<KClass<out DocumentData>> = mutableSetOf()
+    private val installedDocumentTemplate: MutableMap<KClass<out DocumentData>, DocumentTemplate> = mutableMapOf()
+    private val installedDocument: MutableSet<KClass<out Document>> = mutableSetOf()
 
     /**
-     * Consumes a [CopyModel] and corresponding [DocumentCopy] and persists in-memory
-     * At boot, a service will call [installCopy] on all [CopyModel] and [DocumentCopy] to add to the in-memory Barber
+     * Consumes a [DocumentData] and corresponding [DocumentTemplate] and persists in-memory
+     * At boot, a service will call [installDocumentTemplate] on all [DocumentData] and [DocumentTemplate] to add to the in-memory Barber
      */
-    fun installCopy(copyModel: KClass<out CopyModel>, documentCopy: DocumentCopy) = apply {
-      if (installedDocumentCopy.containsKey(copyModel) && installedDocumentCopy[copyModel] != documentCopy) {
+    fun installDocumentTemplate(documentData: KClass<out DocumentData>, documentTemplate: DocumentTemplate) = apply {
+      if (installedDocumentTemplate.containsKey(documentData) && installedDocumentTemplate[documentData] != documentTemplate) {
         throw BarberException(problems = listOf("""
-        |Attempted to install DocumentCopy that will overwrite an already installed DocumentCopy and CopyModel.
+        |Attempted to install DocumentTemplate that will overwrite an already installed DocumentTemplate and DocumentData.
         |Already Installed
-        |CopyModel: $copyModel
-        |DocumentCopy: ${installedDocumentCopy[copyModel]}
+        |DocumentData: $documentData
+        |DocumentTemplate: ${installedDocumentTemplate[documentData]}
         |
         |Attempted to Install
-        |$documentCopy
+        |$documentTemplate
       """.trimMargin()))
       }
-      installedCopyModel.add(copyModel)
-      installedDocumentCopy[copyModel] = documentCopy
+      installedDocumentData.add(documentData)
+      installedDocumentTemplate[documentData] = documentTemplate
     }
 
-    inline fun <reified C : CopyModel> installCopy(documentCopy: DocumentCopy) = installCopy(C::class, documentCopy)
+    inline fun <reified C : DocumentData> installDocumentTemplate(documentTemplate: DocumentTemplate) = installDocumentTemplate(C::class, documentTemplate)
 
     /**
-     * Consumes a [DocumentSpec] and persists in-memory
-     * At boot, a service will call [installDocumentSpec] on all [DocumentSpec] to add to the in-memory Barber instance
+     * Consumes a [Document] and persists in-memory
+     * At boot, a service will call [installDocument] on all [Document] to add to the in-memory Barber instance
      */
-    fun installDocumentSpec(documentSpec: KClass<out DocumentSpec>) = apply {
-      installedDocumentSpec.add(documentSpec)
+    fun installDocument(document: KClass<out Document>) = apply {
+      installedDocument.add(document)
     }
 
-    inline fun <reified D : DocumentSpec> installDocumentSpec() = installDocumentSpec(D::class)
+    inline fun <reified D : Document> installDocument() = installDocument(D::class)
 
     /**
      * Validates Builder inputs and returns a Barber instance with the installed and validated elements
      */
     private fun validate() {
-      installedDocumentCopy.forEach { installedCopy ->
-        val copyModelClass = installedCopy.key
-        val documentCopy = installedCopy.value
+      installedDocumentTemplate.forEach { installedDocumentTemplate ->
+        val documentDataClass = installedDocumentTemplate.key
+        val documentTemplate = installedDocumentTemplate.value
 
-        // DocumentCopy must be installed with a CopyModel that is listed in its Source
-        if (copyModelClass != documentCopy.source) {
+        // DocumentTemplate must be installed with a DocumentData that is listed in its Source
+        if (documentDataClass != documentTemplate.source) {
           throw BarberException(problems = listOf("""
-            |Attempted to install DocumentCopy with a CopyModel not specific in the DocumentCopy source.
-            |DocumentCopy.source: ${documentCopy.source}
-            |CopyModel: $copyModelClass
+            |Attempted to install DocumentTemplate with a DocumentData not specific in the DocumentTemplate source.
+            |DocumentTemplate.source: ${documentTemplate.source}
+            |DocumentData: $documentDataClass
             """.trimMargin()))
         }
 
-        // DocumentSpecs listed in DocumentCopy.Targets must be installed
-        val notInstalledDocumentSpec = documentCopy.targets.filter {
-          !installedDocumentSpec.contains(it)
+        // Documents listed in DocumentTemplate.Targets must be installed
+        val notInstalledDocument = documentTemplate.targets.filter {
+          !installedDocument.contains(it)
         }
-        if (notInstalledDocumentSpec.isNotEmpty()) {
+        if (notInstalledDocument.isNotEmpty()) {
           throw BarberException(problems = listOf("""
-            |Attempted to install DocumentCopy without the corresponding DocumentSpec being installed.
-            |Not installed DocumentCopy.targets:
-            |$notInstalledDocumentSpec
+            |Attempted to install DocumentTemplate without the corresponding Document being installed.
+            |Not installed DocumentTemplate.targets:
+            |$notInstalledDocument
             """.trimMargin()))
         }
 
-        // DocumentSpec targets must have primaryConstructor
-        // and installedCopy must be able to fulfill DocumentSpec target parameter requirements
-        val documentSpecs = documentCopy.targets
-        documentSpecs.forEach { documentSpec ->
-          // Validate that DocumentSpec has a Primary Constructor
-          val documentSpecConstructor = documentSpec.primaryConstructor ?: throw BarberException(
-            problems = listOf("No primary constructor for DocumentSpec class ${documentSpec::class}."))
+        // Document targets must have primaryConstructor
+        // and installedDocumentTemplate must be able to fulfill Document target parameter requirements
+        val documents = documentTemplate.targets
+        documents.forEach { document ->
+          // Validate that Document has a Primary Constructor
+          val documentConstructor = document.primaryConstructor ?: throw BarberException(
+            problems = listOf("No primary constructor for Document class ${document::class}."))
 
           // Determine non-nullable required parameters
-          val requiredParameterNames = documentSpecConstructor.parameters.filter {
+          val requiredParameterNames = documentConstructor.parameters.filter {
             !it.type.isMarkedNullable
           }.map { it.name }
 
-          // Confirm that required parameters are present in installedCopy
-          if (!documentCopy.fields.keys.containsAll(requiredParameterNames)) {
+          // Confirm that required parameters are present in installedDocumentTemplate
+          if (!documentTemplate.fields.keys.containsAll(requiredParameterNames)) {
             throw BarberException(problems = listOf("""
-              |Installed DocumentCopy lacks the required non-null fields for DocumentSpec target
-              |Missing fields: ${requiredParameterNames.filter{ !documentCopy.fields.containsKey(it) }}
-              |DocumentSpec target: ${documentSpec::class}
-              |DocumentCopy: $documentCopy
+              |Installed DocumentTemplate lacks the required non-null fields for Document target
+              |Missing fields: ${requiredParameterNames.filter{ !documentTemplate.fields.containsKey(it) }}
+              |Document target: ${document::class}
+              |DocumentTemplate: $documentTemplate
             """.trimMargin()))
           }
         }
@@ -115,9 +115,9 @@ interface Barber {
      */
     fun build(): Barber {
       validate()
-      return RealBarber(installedDocumentCopy.toMap())
+      return RealBarber(installedDocumentTemplate.toMap())
     }
   }
 }
 
-inline fun <reified C : CopyModel, reified D : DocumentSpec> Barber.newRenderer() = newRenderer(C::class, D::class)
+inline fun <reified C : DocumentData, reified D : Document> Barber.newRenderer() = newRenderer(C::class, D::class)
