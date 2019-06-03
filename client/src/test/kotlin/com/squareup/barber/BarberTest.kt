@@ -1,28 +1,37 @@
 package com.squareup.barber
 
+import com.squareup.barber.examples.MapleSyrupOrFirstLocaleResolver
 import com.squareup.barber.examples.RecipientReceipt
 import com.squareup.barber.examples.TransactionalEmailDocument
 import com.squareup.barber.examples.TransactionalSmsDocument
-import com.squareup.barber.examples.recipientReceiptSmsDocumentTemplate
+import com.squareup.barber.examples.recipientReceiptSmsDocumentTemplateEN_CA
+import com.squareup.barber.examples.recipientReceiptSmsDocumentTemplateEN_GB
+import com.squareup.barber.examples.recipientReceiptSmsDocumentTemplateEN_US
 import com.squareup.barber.examples.sandy50Receipt
 import com.squareup.barber.models.DocumentData
 import com.squareup.barber.models.DocumentTemplate
-import com.squareup.barber.models.Locale
+import com.squareup.barber.models.Locale.Companion.EN_CA
+import com.squareup.barber.models.Locale.Companion.EN_GB
+import com.squareup.barber.models.Locale.Companion.EN_US
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class RealBarbershopTest {
+/**
+ * These our integration end to end tests
+ */
+class BarberTest {
   @Test
-  fun happyPathSms() {
+  fun `Render an SMS`() {
     val barber = BarbershopBuilder()
       .installDocument<TransactionalSmsDocument>()
-      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplate)
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
       .build()
 
     val spec = barber.getBarber<RecipientReceipt, TransactionalSmsDocument>()
-      .render(sandy50Receipt)
+      .render(sandy50Receipt, EN_US)
 
     assertThat(spec).isEqualTo(
       TransactionalSmsDocument(
@@ -32,14 +41,14 @@ class RealBarbershopTest {
   }
 
   @Test
-  fun renderedSpecIsTypeSafeAndSpecific() {
+  fun `Rendered spec is of specific Document type and allows field access`() {
     val barber = BarbershopBuilder()
       .installDocument<TransactionalSmsDocument>()
-      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplate)
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
       .build()
 
     val spec = barber.getBarber<RecipientReceipt, TransactionalSmsDocument>()
-      .render(sandy50Receipt)
+      .render(sandy50Receipt, EN_US)
 
     // Spec matches
     assertThat(spec).isEqualTo(
@@ -53,7 +62,7 @@ class RealBarbershopTest {
   }
 
   @Test
-  fun happyPathEmail() {
+  fun `Render an email`() {
     val recipientReceiptDocumentData = DocumentTemplate(
       fields = mapOf(
         "subject" to "{{sender}} sent you {{amount}}",
@@ -65,7 +74,7 @@ class RealBarbershopTest {
       ),
       source = RecipientReceipt::class,
       targets = setOf(TransactionalEmailDocument::class),
-      locale = Locale.EN_US
+      locale = EN_US
     )
 
     val barber = BarbershopBuilder()
@@ -74,7 +83,7 @@ class RealBarbershopTest {
       .build()
 
     val spec = barber.getBarber<RecipientReceipt, TransactionalEmailDocument>()
-      .render(sandy50Receipt)
+      .render(sandy50Receipt, EN_US)
 
     assertThat(spec).isEqualTo(
       TransactionalEmailDocument(
@@ -89,15 +98,84 @@ class RealBarbershopTest {
     )
   }
 
+  @Test
+  fun `Can install and render multiple locales`() {
+    val barbershop = BarbershopBuilder()
+      .installDocument<TransactionalSmsDocument>()
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_CA)
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_GB)
+      .build()
+
+    val recipientReceiptSms = barbershop.getBarber<RecipientReceipt, TransactionalSmsDocument>()
+
+    val specEN_US = recipientReceiptSms.render(sandy50Receipt, EN_US)
+    assertEquals("Sandy Winchester sent you \$50", specEN_US.sms_body)
+    val specEN_CA = recipientReceiptSms.render(sandy50Receipt, EN_CA)
+    assertEquals("Sandy Winchester sent you \$50 Eh?", specEN_CA.sms_body)
+    val specEN_GB = recipientReceiptSms.render(sandy50Receipt, EN_GB)
+    assertEquals("Sandy Winchester sent you \$50 The Queen approves.", specEN_GB.sms_body)
+  }
+
+  @Test
+  fun `Render succeeds by fallback for a requested locale that is not installed`() {
+    val barber = BarbershopBuilder()
+      .installDocument<TransactionalSmsDocument>()
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
+      .build()
+
+    val spec = barber.getBarber<RecipientReceipt, TransactionalSmsDocument>()
+      .render(sandy50Receipt, EN_CA)
+
+    assertThat(spec).isEqualTo(
+      TransactionalSmsDocument(
+        sms_body = "Sandy Winchester sent you $50"
+      )
+    )
+  }
+
+  @Test
+  fun `Use custom LocaleResolver that entirely replaces the default LocaleResolver`() {
+    val allLocaleBarbershop = BarbershopBuilder()
+      .installDocument<TransactionalSmsDocument>()
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_CA)
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_GB)
+      .setLocaleResolver(MapleSyrupOrFirstLocaleResolver())
+      .build()
+
+    val recipientReceiptSms =
+      allLocaleBarbershop.getBarber<RecipientReceipt, TransactionalSmsDocument>()
+
+    // You always get EN_CA response back with [MapleSyrupOrFirstLocaleResolver]
+    val specEN_US = recipientReceiptSms.render(sandy50Receipt, EN_US)
+    assertEquals("Sandy Winchester sent you \$50 Eh?", specEN_US.sms_body)
+    val specEN_CA = recipientReceiptSms.render(sandy50Receipt, EN_CA)
+    assertEquals("Sandy Winchester sent you \$50 Eh?", specEN_CA.sms_body)
+    val specEN_GB = recipientReceiptSms.render(sandy50Receipt, EN_GB)
+    assertEquals("Sandy Winchester sent you \$50 Eh?", specEN_GB.sms_body)
+
+    // ...and if EN_CA is not installed then [MapleSyrupOrFirstLocaleResolver] returns the first option
+    val onlyUsBarbershop = BarbershopBuilder()
+      .installDocument<TransactionalSmsDocument>()
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
+      .setLocaleResolver(MapleSyrupOrFirstLocaleResolver())
+      .build()
+
+    val specEN_US2 = onlyUsBarbershop.getBarber<RecipientReceipt, TransactionalSmsDocument>()
+      .render(sandy50Receipt, EN_CA)
+    assertEquals("Sandy Winchester sent you \$50", specEN_US2.sms_body)
+  }
+
   @Disabled @Test
   fun fieldStemming() {
     val barber = BarbershopBuilder()
       .installDocument<TransactionalEmailDocument>()
-      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplate)
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
       .build()
 
     val spec = barber.getBarber<RecipientReceipt, TransactionalEmailDocument>()
-      .render(sandy50Receipt)
+      .render(sandy50Receipt, EN_US)
 
     assertThat(spec).isEqualTo(
       TransactionalEmailDocument(
@@ -125,7 +203,7 @@ class RealBarbershopTest {
       ),
       source = RecipientReceipt::class,
       targets = setOf(TransactionalEmailDocument::class),
-      locale = Locale.EN_US
+      locale = EN_US
     )
 
     val exception = assertFailsWith<BarberException> {
@@ -154,7 +232,7 @@ class RealBarbershopTest {
       ),
       source = RecipientReceipt::class,
       targets = setOf(TransactionalEmailDocument::class),
-      locale = Locale.EN_US
+      locale = EN_US
     )
 
     val exception = assertFailsWith<BarberException> {
@@ -179,7 +257,7 @@ class RealBarbershopTest {
       ),
       source = RecipientReceipt::class,
       targets = setOf(TransactionalEmailDocument::class),
-      locale = Locale.EN_US
+      locale = EN_US
     )
 
     val exception = assertFailsWith<BarberException> {
@@ -204,7 +282,7 @@ class RealBarbershopTest {
       ),
       source = RecipientReceipt::class,
       targets = setOf(TransactionalEmailDocument::class),
-      locale = Locale.EN_US
+      locale = EN_US
     )
 
     BarbershopBuilder()
@@ -232,7 +310,7 @@ class RealBarbershopTest {
       ),
       source = RecipientReceipt::class,
       targets = setOf(TransactionalEmailDocument::class),
-      locale = Locale.EN_US
+      locale = EN_US
     )
 
     BarbershopBuilder()

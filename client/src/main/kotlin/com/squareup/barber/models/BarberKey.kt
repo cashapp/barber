@@ -1,4 +1,4 @@
-package com.squareup.barber
+package com.squareup.barber.models
 
 import com.squareup.barber.models.DocumentData
 import com.squareup.barber.models.Document

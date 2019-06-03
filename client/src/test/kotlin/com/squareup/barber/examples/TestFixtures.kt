@@ -2,8 +2,10 @@ package com.squareup.barber.examples
 
 import com.squareup.barber.models.DocumentTemplate
 import com.squareup.barber.models.Locale
+import com.squareup.barber.models.Locale.Companion.EN_CA
+import com.squareup.barber.models.Locale.Companion.EN_GB
 
-val recipientReceiptSmsDocumentTemplate = DocumentTemplate(
+val recipientReceiptSmsDocumentTemplateEN_US = DocumentTemplate(
   fields = mapOf(
     "subject" to "{{sender}} sent you {{amount}}",
     "headline" to "You received {{amount}}",
@@ -16,4 +18,14 @@ val recipientReceiptSmsDocumentTemplate = DocumentTemplate(
   source = RecipientReceipt::class,
   targets = setOf(TransactionalSmsDocument::class),
   locale = Locale.EN_US
+)
+
+val recipientReceiptSmsDocumentTemplateEN_CA = recipientReceiptSmsDocumentTemplateEN_US.copy(
+  fields = recipientReceiptSmsDocumentTemplateEN_US.fields.mapValues { it.value + " Eh?" },
+  locale = EN_CA
+)
+
+val recipientReceiptSmsDocumentTemplateEN_GB = recipientReceiptSmsDocumentTemplateEN_US.copy(
+  fields = recipientReceiptSmsDocumentTemplateEN_US.fields.mapValues { it.value + " The Queen approves." },
+  locale = EN_GB
 )
