@@ -14,7 +14,7 @@ interface Barbershop {
     documentClass: KClass<out D>
   ): Barber<DD, D>
 
-  fun getAllBarbers(): LinkedHashMap<BarberKey, Barber<*, *>>
+  fun getAllBarbers(): LinkedHashMap<BarberKey, Barber<DocumentData, Document>>
 
   interface Builder {
     /**

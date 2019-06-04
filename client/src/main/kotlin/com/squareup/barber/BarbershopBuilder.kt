@@ -90,8 +90,55 @@ class BarbershopBuilder: Barbershop.Builder {
     }
   }
 
+  private fun <C : DocumentData, D : Document> buildBarber(
+    documentDataClass: KClass<out C>,
+    documentClass: KClass<out D>
+  ): Barber<C, D> {
+    // Lookup installed DocumentTemplate that corresponds to DocumentData
+    val documentTemplate: DocumentTemplate = installedDocumentTemplate[documentDataClass] ?: throw BarberException(
+      problems = listOf("""
+      |Attempted to render with DocumentTemplate that has not been installed for DocumentData: $documentDataClass.
+    """.trimMargin()))
+
+    // Confirm that output Document is a valid target for the DocumentTemplate
+    if (!documentTemplate.targets.contains(documentClass)) {
+      throw BarberException(problems = listOf("""
+        |Specified target $documentClass not a valid target for DocumentData's corresponding DocumentTemplate.
+        |Valid targets:
+        |${documentTemplate.targets}
+      """.trimMargin()))
+    }
+
+    // Pull out required parameters from Document constructor
+    val documentConstructor = documentClass.primaryConstructor!!
+    val documentParametersByName = documentConstructor.parameters.associateBy { it.name }
+
+    // Find missing fields in DocumentTemplate
+    // Missing fields occur when a nullable field in Document is not an included key in the DocumentTemplate fields
+    // In the Parameters Map in the Document constructor though, all parameter keys must be present (including
+    // nullable)
+    val missingFields = documentParametersByName.filterKeys {
+      !it.isNullOrBlank() && !documentTemplate.fields.containsKey(it)
+    }
+
+    // Initialize keys for missing fields in DocumentTemplate
+    val documentDataFields: MutableMap<String, String?> = documentTemplate.fields.toMutableMap()
+    missingFields.map { documentDataFields.putIfAbsent(it.key!!, null) }
+
+    return RealBarber(documentConstructor, documentParametersByName, documentDataFields)
+  }
+
+  private fun buildAllBarbers(): LinkedHashMap<BarberKey, Barber<DocumentData, Document>> {
+    val barbers: LinkedHashMap<BarberKey, Barber<DocumentData, Document>> = linkedMapOf()
+    for (entry in installedDocumentTemplate) {
+      val documentData = entry.value
+      documentData.targets.forEach { barbers[BarberKey(documentData.source, it)] = buildBarber(documentData.source, it) }
+    }
+    return barbers
+  }
+
   override fun build(): Barbershop {
     validate()
-    return RealBarbershop(installedDocumentTemplate.toMap())
+    return RealBarbershop(buildAllBarbers())
   }
 }
