@@ -1,8 +1,9 @@
 package com.squareup.barber
 
+import com.squareup.barber.models.BarberKey
+import com.squareup.barber.models.Document
 import com.squareup.barber.models.DocumentData
 import com.squareup.barber.models.DocumentTemplate
-import com.squareup.barber.models.Document
 import kotlin.reflect.KClass
 
 /**
@@ -14,14 +15,17 @@ interface Barbershop {
     documentClass: KClass<out D>
   ): Barber<DD, D>
 
-  fun getAllBarbers(): LinkedHashMap<BarberKey, Barber<DocumentData, Document>>
+  fun getAllBarbers(): Map<BarberKey, Barber<DocumentData, Document>>
 
   interface Builder {
     /**
      * Consumes a [DocumentData] and corresponding [DocumentTemplate] and persists in-memory
      * At boot, a service will call [installDocumentTemplate] on all [DocumentData] and [DocumentTemplate] to add to the in-memory Barbershop
      */
-    fun installDocumentTemplate(documentData: KClass<out DocumentData>, documentTemplate: DocumentTemplate): Builder
+    fun installDocumentTemplate(
+      documentDataClass: KClass<out DocumentData>,
+      documentTemplate: DocumentTemplate
+    ): Builder
 
     /**
      * Consumes a [Document] and persists in-memory
@@ -30,10 +34,17 @@ interface Barbershop {
     fun installDocument(document: KClass<out Document>): Builder
 
     /**
+     * Set a [LocaleResolver] to be used when resolving a localized [DocumentTemplate].
+     * Default: [MatchOrFirstLocaleResolver].
+     */
+    fun setLocaleResolver(resolver: LocaleResolver): Builder
+
+    /**
      * Validates BarbershopBuilder inputs and returns a Barbershop instance with the installed and validated elements
      */
     fun build(): Barbershop
   }
 }
 
-inline fun <reified DD : DocumentData, reified D : Document> Barbershop.getBarber() = getBarber(DD::class, D::class)
+inline fun <reified DD : DocumentData, reified D : Document> Barbershop.getBarber() = getBarber(
+    DD::class, D::class)

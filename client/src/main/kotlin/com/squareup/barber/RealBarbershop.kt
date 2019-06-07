@@ -1,11 +1,12 @@
 package com.squareup.barber
 
+import com.squareup.barber.models.BarberKey
 import com.squareup.barber.models.Document
 import com.squareup.barber.models.DocumentData
 import kotlin.reflect.KClass
 
 internal class RealBarbershop(
-  private val barbers: LinkedHashMap<BarberKey, Barber<DocumentData, Document>>
+  private val barbers: Map<BarberKey, Barber<DocumentData, Document>>
 ) : Barbershop {
   @Suppress("UNCHECKED_CAST")
   override fun <DD : DocumentData, D : Document> getBarber(
@@ -13,5 +14,5 @@ internal class RealBarbershop(
     documentClass: KClass<out D>
   ): Barber<DD, D> = barbers[BarberKey(documentDataClass, documentClass)] as Barber<DD, D>
 
-  override fun getAllBarbers(): LinkedHashMap<BarberKey, Barber<DocumentData, Document>> = barbers
+  override fun getAllBarbers(): Map<BarberKey, Barber<DocumentData, Document>> = barbers
 }
