@@ -7,8 +7,8 @@ import com.squareup.barber.examples.TransactionalSmsDocument
 import com.squareup.barber.examples.recipientReceiptSmsDocumentTemplateEN_CA
 import com.squareup.barber.examples.recipientReceiptSmsDocumentTemplateEN_GB
 import com.squareup.barber.examples.recipientReceiptSmsDocumentTemplateEN_US
-import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class BarbershopBuilderTest {
@@ -45,10 +45,14 @@ class BarbershopBuilderTest {
         .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
         .build()
     }
-    Assertions.assertThat(exception.problems).containsExactly("""
-      |Attempted to install DocumentTemplate without the corresponding Document being installed.
+    assertEquals("""
+      |Problems
+      |1) Attempted to install DocumentTemplate without the corresponding Document being installed.
       |Not installed DocumentTemplate.targets:
-      |[class com.squareup.barber.examples.TransactionalSmsDocument]""".trimMargin())
+      |[class com.squareup.barber.examples.TransactionalSmsDocument]
+      |
+      """.trimMargin(),
+      exception.toString())
   }
 
   @Test
@@ -60,9 +64,16 @@ class BarbershopBuilderTest {
         .installDocumentTemplate<SenderReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
         .build()
     }
-    Assertions.assertThat(exception.problems).containsExactly("""
-      |Attempted to install DocumentTemplate with a DocumentData not specific in the DocumentTemplate source.
+    assertEquals("""
+      |Problems
+      |1) Attempted to install DocumentTemplate with a DocumentData not specified in the DocumentTemplate source.
       |DocumentTemplate.source: class com.squareup.barber.examples.RecipientReceipt
-      |DocumentData: class com.squareup.barber.examples.SenderReceipt""".trimMargin())
+      |DocumentData: class com.squareup.barber.examples.SenderReceipt
+      |
+      |2) Attempted to install DocumentTemplate without the corresponding Document being installed.
+      |Not installed DocumentTemplate.targets:
+      |[class com.squareup.barber.examples.TransactionalSmsDocument]
+      |
+      """.trimMargin(), exception.toString())
   }
 }

@@ -1,31 +1,35 @@
 package com.squareup.barber
 
+import com.github.mustachejava.DefaultMustacheFactory
+import com.github.mustachejava.Mustache
 import com.google.common.collect.HashBasedTable
 import com.google.common.collect.Table
 import com.squareup.barber.models.BarberKey
+import com.squareup.barber.models.CompiledDocumentTemplate
 import com.squareup.barber.models.Document
 import com.squareup.barber.models.DocumentData
 import com.squareup.barber.models.DocumentTemplate
-import com.squareup.barber.models.FieldNullableDocumentTemplate
 import com.squareup.barber.models.Locale
-import java.lang.reflect.Field
+import java.io.StringReader
 import kotlin.reflect.KClass
+import kotlin.reflect.KParameter
 import kotlin.reflect.full.primaryConstructor
 
 class BarbershopBuilder : Barbershop.Builder {
-  private val installedDocumentTemplates: Table<KClass<out DocumentData>, Locale, DocumentTemplate> = HashBasedTable.create()
+  private val installedDocumentTemplates: Table<KClass<out DocumentData>, Locale, DocumentTemplate> =
+    HashBasedTable.create()
   private val installedDocument: MutableSet<KClass<out Document>> = mutableSetOf()
-
+  private val mustacheFactory = DefaultMustacheFactory()
   private var localeResolver: LocaleResolver = MatchOrFirstLocaleResolver()
 
   override fun installDocumentTemplate(
     documentDataClass: KClass<out DocumentData>,
     documentTemplate: DocumentTemplate
   ) = apply {
-    val installedCopyHasKey = installedDocumentTemplates.containsRow(documentDataClass)
-    val installedCopyValueIsNotAlreadyInstalled =
+    val installedDocumentTemplatesHasKey = installedDocumentTemplates.containsRow(documentDataClass)
+    val installedDocumentTemplateIsNotAlreadyInstalled =
       installedDocumentTemplates.get(documentDataClass, documentTemplate.locale) == documentTemplate
-    if (installedCopyHasKey && installedCopyValueIsNotAlreadyInstalled) {
+    if (installedDocumentTemplatesHasKey && installedDocumentTemplateIsNotAlreadyInstalled) {
       throw BarberException(problems = listOf("""
         |Attempted to install DocumentTemplate that will overwrite an already installed DocumentTemplate with locale
         |${documentTemplate.locale}.
@@ -57,17 +61,18 @@ class BarbershopBuilder : Barbershop.Builder {
    * Validates BarbershopBuilder inputs and returns a Barbershop instance with the installed and validated elements
    */
   private fun validate() {
+    val problems: MutableList<String> = mutableListOf()
     installedDocumentTemplates.cellSet().forEach { cell ->
       val documentDataClass = cell.rowKey!!
       val documentTemplate = cell.value!!
 
       // DocumentTemplate must be installed with a DocumentData that is listed in its Source
       if (documentDataClass != documentTemplate.source) {
-        throw BarberException(problems = listOf("""
-          |Attempted to install DocumentTemplate with a DocumentData not specific in the DocumentTemplate source.
+        problems.add("""
+          |Attempted to install DocumentTemplate with a DocumentData not specified in the DocumentTemplate source.
           |DocumentTemplate.source: ${documentTemplate.source}
           |DocumentData: ${documentDataClass}
-          """.trimMargin()))
+          """.trimMargin())
       }
 
       // Documents listed in DocumentTemplate.Targets must be installed
@@ -75,11 +80,11 @@ class BarbershopBuilder : Barbershop.Builder {
         !installedDocument.contains(it)
       }
       if (notInstalledDocument.isNotEmpty()) {
-        throw BarberException(problems = listOf("""
+        problems.add("""
           |Attempted to install DocumentTemplate without the corresponding Document being installed.
           |Not installed DocumentTemplate.targets:
           |$notInstalledDocument
-          """.trimMargin()))
+          """.trimMargin())
       }
 
       // Document targets must have primaryConstructor
@@ -87,27 +92,33 @@ class BarbershopBuilder : Barbershop.Builder {
       val documents = documentTemplate.targets
       documents.forEach { document ->
         // Validate that Document has a Primary Constructor
-        val documentConstructor = document.primaryConstructor ?: throw BarberException(
-          problems = listOf("No primary constructor for Document class ${document::class}."))
+        val documentConstructor = document.primaryConstructor
 
-        // Determine non-nullable required parameters
-        val requiredParameterNames = documentConstructor.parameters.filter {
-          !it.type.isMarkedNullable
-        }.map { it.name }
+        if (documentConstructor == null) {
+          problems.add("No primary constructor for Document class ${document::class}.")
+        } else {
+          // Determine non-nullable required parameters
+          val requiredParameterNames = documentConstructor.parameters.filter {
+            !it.type.isMarkedNullable
+          }.map { it.name }
 
-        // Confirm that required parameters are present in installedDocumentTemplates
-        if (!documentTemplate.fields.keys.containsAll(requiredParameterNames)) {
-          val missingFields = requiredParameterNames.filter {
-            !documentTemplate.fields.containsKey(it)
+          // Confirm that required parameters are present in installedDocumentTemplates
+          if (!documentTemplate.fields.keys.containsAll(requiredParameterNames)) {
+            val missingFields = requiredParameterNames.filter {
+              !documentTemplate.fields.containsKey(it)
+            }
+            problems.add("""
+              |Installed DocumentTemplate lacks the required non-null fields for Document target
+              |Missing fields: $missingFields
+              |Document target: ${document::class}
+              |DocumentTemplate: $documentTemplate
+              """.trimMargin())
           }
-          throw BarberException(problems = listOf("""
-            |Installed DocumentTemplate lacks the required non-null fields for Document target
-            |Missing fields: $missingFields
-            |Document target: ${document::class}
-            |DocumentTemplate: $documentTemplate
-            """.trimMargin()))
         }
       }
+    }
+    if (problems.isNotEmpty()) {
+      throw BarberException(problems = problems)
     }
   }
 
@@ -141,26 +152,41 @@ class BarbershopBuilder : Barbershop.Builder {
     val documentConstructor = documentClass.primaryConstructor!!
     val documentParametersByName = documentConstructor.parameters.associateBy { it.name }
 
-    val processedDocumentTemplates =
-      documentTemplates.mapValues { it: Map.Entry<Locale, DocumentTemplate> ->
-        val documentTemplate = it.value
-        // Find missing fields in DocumentTemplate
-        // Missing fields occur when a nullable field in Document is not an included key in the DocumentTemplate fields
-        // In the Parameters Map in the Document constructor though, all parameter keys must be present (including
-        // nullable)
-        val missingFields = documentParametersByName.filterKeys {
-          !it.isNullOrBlank() && !documentTemplate.fields.containsKey(it)
-        }
+    return RealBarber(
+      documentConstructor = documentConstructor,
+      documentParametersByName = documentParametersByName,
+      compiledDocumentTemplateLocales = compileDocumentTemplates(documentTemplates, documentParametersByName),
+      localeResolver = localeResolver)
+  }
 
-        // Initialize keys for missing fields in DocumentTemplate
-        val documentDataFields: MutableMap<String, String?> =
-          documentTemplate.fields.toMutableMap()
-        missingFields.map { documentDataFields.putIfAbsent(it.key!!, null) }
-        FieldNullableDocumentTemplate(fields = documentDataFields, source = documentTemplate.source, targets = documentTemplate.targets, locale = documentTemplate.locale)
-      }
+  private fun compileDocumentTemplates(
+    documentTemplates: MutableMap<Locale, DocumentTemplate>,
+    documentParametersByName: Map<String?, KParameter>
+  ): Map<Locale, CompiledDocumentTemplate> = documentTemplates.mapValues { it: Map.Entry<Locale, DocumentTemplate> ->
+    val documentTemplate = it.value
 
-    return RealBarber(documentConstructor, documentParametersByName, processedDocumentTemplates,
-      localeResolver)
+    // Find missing fields in DocumentTemplate
+    // Missing fields occur when a nullable field in Document is not an included key in the DocumentTemplate fields
+    // In the Parameters Map in the Document constructor though, all parameter keys must be present (including
+    // nullable)
+    val missingFields = documentParametersByName.filterKeys {
+      !it.isNullOrBlank() && !documentTemplate.fields.containsKey(it)
+    }
+
+    // Pre-compile Mustache templates
+    val documentDataFields: MutableMap<String, Mustache?> =
+      documentTemplate.fields.mapValues {
+        it.value.asMustache()
+      }.toMutableMap()
+
+    // Initialize keys for missing fields in DocumentTemplate
+    missingFields.map { documentDataFields.putIfAbsent(it.key!!, null) }
+
+    CompiledDocumentTemplate(
+      fields = documentDataFields,
+      source = documentTemplate.source,
+      targets = documentTemplate.targets,
+      locale = documentTemplate.locale)
   }
 
   private fun buildAllBarbers(): LinkedHashMap<BarberKey, Barber<DocumentData, Document>> {
@@ -173,6 +199,8 @@ class BarbershopBuilder : Barbershop.Builder {
     }
     return barbers
   }
+
+  private fun String.asMustache() = mustacheFactory.compile(StringReader(this), this)
 
   override fun build(): Barbershop {
     validate()
