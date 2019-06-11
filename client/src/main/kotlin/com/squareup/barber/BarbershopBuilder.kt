@@ -176,7 +176,7 @@ class BarbershopBuilder : Barbershop.Builder {
     // Pre-compile Mustache templates
     val documentDataFields: MutableMap<String, Mustache?> =
       documentTemplate.fields.mapValues {
-        it.value.asMustache()
+        mustacheFactory.compile(StringReader(it.value), it.value)
       }.toMutableMap()
 
     // Initialize keys for missing fields in DocumentTemplate
@@ -199,8 +199,6 @@ class BarbershopBuilder : Barbershop.Builder {
     }
     return barbers
   }
-
-  private fun String.asMustache() = mustacheFactory.compile(StringReader(this), this)
 
   override fun build(): Barbershop {
     validate()
