@@ -5,7 +5,7 @@ import com.squareup.barber.models.Locale
 interface LocaleResolver {
   /**
    * @return a [Locale] from the given [options]
-   * @param [options] must be valid keys
+   * @param [options] must be valid keys for a Locale keyed Map
    */
   fun resolve(locale: Locale, options: Set<Locale>): Locale
 
