@@ -41,7 +41,7 @@ ext.dep = [
   "retrofitMoshi": "com.squareup.retrofit2:converter-moshi:2.4.0",
   "retrofitWire": "com.squareup.retrofit2:converter-wire:2.4.0",
   "shadowJarPlugin": "com.github.jengelman.gradle.plugins:shadow:4.0.4",
-  "skim": "com.squareup.skim:skim:2019.06.18-1560885406-0220d94",
+  "skim": "com.squareup.skim:skim:2019.06.18-1560890701-129c4af",
   "tracingJaeger": "com.uber.jaeger:jaeger-core:0.24.0",
   "wireCompiler": "com.squareup.wire:wire-compiler:3.0.0-square09",
   "wireMoshiAdapter": "com.squareup.wire:wire-moshi-adapter:3.0.0-alpha01",
