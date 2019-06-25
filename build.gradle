@@ -1,19 +1,30 @@
+buildscript {
+  repositories {
+    mavenCentral()
+  }
+}
+
+plugins {
+  id 'com.gradle.build-scan' version "2.1"
+}
+
+buildScan {
+  termsOfServiceUrl = 'https://gradle.com/terms-of-service'
+  termsOfServiceAgree = 'yes'
+}
+
 apply from: new File("./dependencies.gradle")
 
 subprojects {
   apply plugin: "java"
   buildscript {
     repositories {
-      maven {
-        url "https://maven.global.square/artifactory/square-public"
-      }
       mavenCentral()
       jcenter()
     }
 
     dependencies {
       classpath dep.kotlinGradlePlugin
-      classpath dep.wireCompiler
       classpath dep.junitGradlePlugin
       classpath dep.shadowJarPlugin
       classpath dep.mavenPublishGradlePlugin
@@ -21,9 +32,6 @@ subprojects {
   }
 
   repositories {
-    maven {
-      url "https://maven.global.square/artifactory/square-public"
-    }
     mavenCentral()
     jcenter()
   }
@@ -38,6 +46,9 @@ subprojects {
       exceptionFormat = 'full'
       showExceptions = true
     }
+  }
+  if (rootProject.file("hooks.gradle").exists()) {
+    apply from: rootProject.file("hooks.gradle")
   }
 }
 
