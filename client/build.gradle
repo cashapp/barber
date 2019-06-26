@@ -1,7 +1,6 @@
 apply plugin: 'kotlin'
 apply plugin: 'org.junit.platform.gradle.plugin'
 apply plugin: 'com.github.johnrengelman.shadow'
-apply from: "https://git.sqcorp.co/projects/CASH/repos/cash-upload/raw/common-upload.gradle?at=refs%2Fheads%2Fmaster"
 
 compileKotlin {
   kotlinOptions {
@@ -30,7 +29,6 @@ dependencies {
   implementation dep.moshi
   implementation dep.okio
   implementation dep.mustacheCompiler
-  implementation dep.wireRuntime
 
   testImplementation dep.assertj
   testImplementation dep.kotlinTest
