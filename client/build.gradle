@@ -11,6 +11,11 @@ dependencies {
   testImplementation dep.junitEngine
 }
 
+compileJava {
+  sourceCompatibility = 1.8
+  targetCompatibility = 1.8
+}
+
 jar {
   baseName = "client"
 }

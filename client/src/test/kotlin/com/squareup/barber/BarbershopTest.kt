@@ -19,7 +19,7 @@ class BarbershopTest {
       .build()
     val barber = barbershop.getBarber<RecipientReceipt, TransactionalSmsDocument>()
     assertEquals("class com.squareup.barber.RealBarber", barber::class.toString())
-    //TODO confirm that the returned Barber is strictly of the requested DocumentData and Document types
+    // TODO confirm that the returned Barber is strictly of the requested DocumentData and Document types
   }
 
   @Test

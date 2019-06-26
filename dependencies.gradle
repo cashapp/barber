@@ -18,12 +18,14 @@ ext.dep = [
   "kotlinScriptRuntime": "org.jetbrains.kotlin:kotlin-script-runtime:1.3.21",
   "kotlinStdLib": "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.21",
   "kotlinTest": "org.jetbrains.kotlin:kotlin-test:1.3.21",
+  "ktlintVersion": "0.33.0",
   "loggingApi": "io.github.microutils:kotlin-logging:1.4.9",
   "mavenPublishGradlePlugin": "com.vanniktech:gradle-maven-publish-plugin:0.8.0",
   "moshi": "com.squareup.moshi:moshi-kotlin:1.8.0",
   "mustacheCompiler": "com.github.spullara.mustache.java:compiler:0.9.5",
   "okio": "com.squareup.okio:okio:2.2.2",
   "shadowJarPlugin": "com.github.jengelman.gradle.plugins:shadow:4.0.4",
+  "spotlessPlugin": "com.diffplug.spotless:spotless-plugin-gradle:3.23.0",
   "tracingJaeger": "com.uber.jaeger:jaeger-core:0.24.0",
 ]
 // Auto-generated from polyrepo's master-dependencies.json. Update via polyrepo dep-add and polyrepo dep-upgrade.
