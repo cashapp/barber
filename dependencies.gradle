@@ -1,6 +1,7 @@
 // Auto-generated from polyrepo's master-dependencies.json. Update via polyrepo dep-add and polyrepo dep-upgrade.
 ext.dep = [
   "assertj": "org.assertj:assertj-core:3.9.0",
+  "gradleBuildScan": "com.gradle:build-scan-plugin:2.3",
   "guava": "com.google.guava:guava:23.6-jre",
   "guice": "com.google.inject:guice:4.2.2",
   "guiceMultibindings": "com.google.inject.extensions:guice-multibindings:4.2.2",
