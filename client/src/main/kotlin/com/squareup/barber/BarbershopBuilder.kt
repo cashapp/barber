@@ -71,7 +71,7 @@ class BarbershopBuilder : Barbershop.Builder {
         problems.add("""
           |Attempted to install DocumentTemplate with a DocumentData not specified in the DocumentTemplate source.
           |DocumentTemplate.source: ${documentTemplate.source}
-          |DocumentData: ${documentDataClass}
+          |DocumentData: $documentDataClass
           """.trimMargin())
       }
 
