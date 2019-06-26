@@ -257,11 +257,11 @@ package com.your.service.package
 import com.google.inject.AbstractModule
 import com.google.inject.Key
 import com.google.inject.util.Types
-import com.squareup.barber.Barber
-import com.squareup.barber.Barbershop
-import com.squareup.barber.models.BarberKey
-import com.squareup.barber.models.Document
-import com.squareup.barber.models.DocumentData
+import app.cash.barber.Barber
+import app.cash.barber.Barbershop
+import app.cash.barber.models.BarberKey
+import app.cash.barber.models.Document
+import app.cash.barber.models.DocumentData
 
 /**
  * Binds all the barbers so they may be injected directly like so:
@@ -324,8 +324,3 @@ License
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
- [1]: http://square.github.io/picasso/
- [2]: https://search.maven.org/search?q=g:com.squareup.picasso%20AND%20a:picasso
- [snap]: https://oss.sonatype.org/content/repositories/snapshots/
