@@ -1,5 +1,7 @@
 # Barber💈
 
+See the [project website][okhttp] for documentation and APIs.
+
 A type safe Kotlin JVM library for building up localized, fillable, themed documents using [Mustache](https://mustache.github.io) templating.
 
 # Why?
@@ -308,6 +310,19 @@ BarberMoney(Money(50_00), EN_US)
  )
 ```
 
+
+Releases
+--------
+
+Our [change log][changelog] has release history.
+
+```kotlin
+implementation("app.cash.barber:barber:0.1.0")
+```
+
+Snapshot builds are [available][snap].
+
+
 License
 --------
 
@@ -324,3 +339,6 @@ License
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
+
+ [changelog]: http://cashapp.github.io/barber/changelog/
+ [snap]: https://oss.sonatype.org/content/repositories/snapshots/

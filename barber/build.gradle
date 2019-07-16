@@ -1,3 +1,11 @@
+apply plugin: 'com.vanniktech.maven.publish'
+
+jar {
+  manifest {
+    attributes('Automatic-Module-Name': 'app.cash.barber')
+  }
+}
+
 dependencies {
   implementation dep.guava
   implementation dep.kotlinStdLib
@@ -20,9 +28,10 @@ jar {
   baseName = "client"
 }
 
-shadowJar {
-  exclude('module-info.class') // https://github.com/johnrengelman/shadow/issues/352
-  mergeServiceFiles()
-  zip64 true
-  classifier = null
+afterEvaluate { project ->
+  project.tasks.dokka {
+    outputDirectory = "$rootDir/docs/0.x"
+    outputFormat = 'gfm'
+  }
 }
+

@@ -7,3 +7,5 @@ build/
 polyrepo-settings.gradle
 dev/
 docker-sources/
+**/site/
+docs/0.x/*

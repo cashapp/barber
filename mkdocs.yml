@@ -1,0 +1,46 @@
+site_name: Barber
+repo_name: Barber
+repo_url: https://github.com/cashapp/barber
+site_description: "A Barber"
+site_author: Square, Inc.
+remote_branch: gh-pages
+
+copyright: 'Copyright &copy; 2019 Square, Inc.'
+
+theme:
+  name: 'material'
+  favicon: img/favicon.ico
+  logo: img/cashapp.png
+  feature:
+    tabs: false
+  palette:
+    primary: 'grey'
+    accent: 'green'
+
+extra_css:
+  - 'css/app.css'
+
+markdown_extensions:
+  - smarty
+  - codehilite:
+      guess_lang: false
+  - footnotes
+  - meta
+  - toc:
+      permalink: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.inlinehilite
+  - pymdownx.magiclink
+  - pymdownx.smartsymbols
+  - pymdownx.superfences
+  - tables
+
+nav:
+  - 'Overview': index.md
+  - 'Stack Overflow ⏏': https://stackoverflow.com/questions/tagged/barber?sort=active
+  - '0.x API': 0.x/barber/app/cash/barber/index.md
+  - 'Change Log': changelog.md
+  - 'Releasing': releasing.md
+
