@@ -1,6 +1,6 @@
 # Barber💈
 
-See the [project website][okhttp] for documentation and APIs.
+See the [project website][barber] for documentation and APIs.
 
 A type safe Kotlin JVM library for building up localized, fillable, themed documents using [Mustache](https://mustache.github.io) templating.
 
@@ -340,5 +340,6 @@ License
     See the License for the specific language governing permissions and
     limitations under the License.
 
+ [barber]: https://cashapp.github.io/barber/
  [changelog]: http://cashapp.github.io/barber/changelog/
  [snap]: https://oss.sonatype.org/content/repositories/snapshots/

@@ -176,8 +176,7 @@ class BarbershopBuilder : Barbershop.Builder {
     // Pre-compile Mustache templates
     val documentDataFields: MutableMap<String, Mustache?> =
       documentTemplate.fields.mapValues {
-        val mustache = mustacheFactory.compile(StringReader(it.value), it.value)
-        mustache
+        mustacheFactory.compile(StringReader(it.value), it.value)
       }.toMutableMap()
 
     // Initialize keys for missing fields in DocumentTemplate
