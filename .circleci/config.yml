@@ -76,6 +76,35 @@ jobs:
       - store_test_results:
           name: Store test results
           path: ~/test-results
+  docs:
+    machine:
+      image: circleci/classic:latest
+    parallelism: 1
+    working_directory: ~/barber
+    steps:
+      - checkout # check out source code to working directory
+      - run: |
+          sudo mkdir -p /usr/local/bin
+          sudo chown -R circleci:circleci /usr/local/bin
+      - run: |
+          sudo mkdir -p /usr/local/lib/python3.6/site-packages
+          sudo chown -R circleci:circleci /usr/local/lib/python3.6/site-packages
+      - restore_cache:
+          key: pipdeps-{{ .Branch }}
+      - run: sudo pip install mkdocs mkdocs-material
+      - save_cache:
+          key: pipdeps-{{ .Branch }}
+          paths:
+            - "/usr/local/bin"
+            - "/usr/local/lib/python3.6/site-packages"
+      - run: |
+          ./gradlew \
+            :barber:dokka
+      - run: |
+          cat README.md | grep -v 'project website' > docs/index.md
+          cp CHANGELOG.md docs/changelog.md
+      - run: mkdocs build
+
 # TODO bring back "Collect gradle reports" and "Store gradle reports" tasks
 workflows:
   version: 2
@@ -86,9 +115,11 @@ workflows:
             branches:
               only: master
       - java
+      - docs
   nightly:
     jobs:
       - java
+      - docs
     triggers:
       - schedule:
           # midnight mountain time in UTC
