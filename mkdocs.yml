@@ -39,8 +39,9 @@ markdown_extensions:
 
 nav:
   - 'Overview': index.md
-  - 'Stack Overflow ⏏': https://stackoverflow.com/questions/tagged/barber?sort=active
-  - '0.x API': 0.x/barber/app/cash/barber/index.md
+  - '0.x API':
+      - 'barber': 0.x/barber/app.cash.barber/index.md
+      - 'barber.models': 0.x/barber/app.cash.barber.models/index.md
   - 'Change Log': changelog.md
   - 'Releasing': releasing.md
-
+  - 'Stack Overflow ⏏': https://stackoverflow.com/questions/tagged/barber?sort=active
