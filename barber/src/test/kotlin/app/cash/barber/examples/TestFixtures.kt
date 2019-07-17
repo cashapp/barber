@@ -1,9 +1,11 @@
 package app.cash.barber.examples
 
+import app.cash.barber.models.DocumentData
 import app.cash.barber.models.DocumentTemplate
 import app.cash.barber.models.Locale
 import app.cash.barber.models.Locale.Companion.EN_CA
 import app.cash.barber.models.Locale.Companion.EN_GB
+import app.cash.barber.models.Locale.Companion.EN_US
 
 val recipientReceiptSmsDocumentTemplateEN_US = DocumentTemplate(
   fields = mapOf(
@@ -17,7 +19,7 @@ val recipientReceiptSmsDocumentTemplateEN_US = DocumentTemplate(
   ),
   source = RecipientReceipt::class,
   targets = setOf(TransactionalSmsDocument::class),
-  locale = Locale.EN_US
+  locale = EN_US
 )
 
 val recipientReceiptSmsDocumentTemplateEN_CA = recipientReceiptSmsDocumentTemplateEN_US.copy(
