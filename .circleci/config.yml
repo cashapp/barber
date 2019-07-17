@@ -115,11 +115,7 @@ workflows:
             branches:
               only: master
       - java
-      # Ensure that PRs still have a buildable docs site, not needed on master
-      - docs:
-          filters:
-            branches:
-              ignore: master
+      - docs
   nightly:
     jobs:
       - java
