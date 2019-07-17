@@ -27,35 +27,35 @@ class BarberTest {
   @Test
   fun `Render an SMS`() {
     val barber = BarbershopBuilder()
-      .installDocument<TransactionalSmsDocument>()
-      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
-      .build()
+        .installDocument<TransactionalSmsDocument>()
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
+        .build()
 
     val spec = barber.getBarber<RecipientReceipt, TransactionalSmsDocument>()
-      .render(sandy50Receipt, EN_US)
+        .render(sandy50Receipt, EN_US)
 
     assertThat(spec).isEqualTo(
-      TransactionalSmsDocument(
-        sms_body = "Sandy Winchester sent you $50"
-      )
+        TransactionalSmsDocument(
+            sms_body = "Sandy Winchester sent you $50"
+        )
     )
   }
 
   @Test
   fun `Rendered spec is of specific Document type and allows field access`() {
     val barber = BarbershopBuilder()
-      .installDocument<TransactionalSmsDocument>()
-      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
-      .build()
+        .installDocument<TransactionalSmsDocument>()
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
+        .build()
 
     val spec = barber.getBarber<RecipientReceipt, TransactionalSmsDocument>()
-      .render(sandy50Receipt, EN_US)
+        .render(sandy50Receipt, EN_US)
 
     // Spec matches
     assertThat(spec).isEqualTo(
-      TransactionalSmsDocument(
-        sms_body = "Sandy Winchester sent you $50"
-      )
+        TransactionalSmsDocument(
+            sms_body = "Sandy Winchester sent you $50"
+        )
     )
 
     // Returned rendered spec is type safely accessible
@@ -65,48 +65,117 @@ class BarberTest {
   @Test
   fun `Render an email`() {
     val recipientReceiptDocumentData = DocumentTemplate(
-      fields = mapOf(
-        "subject" to "{{sender}} sent you {{amount}}",
-        "headline" to "You received {{amount}}",
-        "short_description" to "You’ve received a payment from {{sender}}! The money will be in your bank account " +
-          "{{deposit_expected_at}}.",
-        "primary_button" to "Cancel this payment",
-        "primary_button_url" to "{{cancelUrl}}"
-      ),
-      source = RecipientReceipt::class,
-      targets = setOf(TransactionalEmailDocument::class),
-      locale = EN_US
+        fields = mapOf(
+            "subject" to "{{sender}} sent you {{amount}}",
+            "headline" to "You received {{amount}}",
+            "short_description" to "You’ve received a payment from {{sender}}! The money will be in your bank account " +
+                "{{deposit_expected_at}}.",
+            "primary_button" to "Cancel this payment",
+            "primary_button_url" to "{{cancelUrl}}"
+        ),
+        source = RecipientReceipt::class,
+        targets = setOf(TransactionalEmailDocument::class),
+        locale = EN_US
     )
 
     val barber = BarbershopBuilder()
-      .installDocument<TransactionalEmailDocument>()
-      .installDocumentTemplate<RecipientReceipt>(recipientReceiptDocumentData)
-      .build()
+        .installDocument<TransactionalEmailDocument>()
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptDocumentData)
+        .build()
 
     val spec = barber.getBarber<RecipientReceipt, TransactionalEmailDocument>()
-      .render(sandy50Receipt, EN_US)
+        .render(sandy50Receipt, EN_US)
 
     assertThat(spec).isEqualTo(
-      TransactionalEmailDocument(
-        subject = "Sandy Winchester sent you $50",
-        headline = "You received $50",
-        short_description = "You’ve received a payment from Sandy Winchester! The money will be in your bank account 2019-05-21T16:02:00Z.",
-        primary_button = "Cancel this payment",
-        primary_button_url = "https://cash.app/cancel/123",
-        secondary_button = null,
-        secondary_button_url = null
-      )
+        TransactionalEmailDocument(
+            subject = "Sandy Winchester sent you $50",
+            headline = "You received $50",
+            short_description = "You’ve received a payment from Sandy Winchester! The money will be in your bank account 2019-05-21T16:02:00Z.",
+            primary_button = "Cancel this payment",
+            primary_button_url = "https://cash.app/cancel/123",
+            secondary_button = null,
+            secondary_button_url = null
+        )
+    )
+  }
+
+  @Test
+  fun `Render an email and sms with nested data`() {
+    data class EmailButton(
+      val color: String,
+      val text: String,
+      val link: String,
+      val size: String
+    )
+
+    data class NestedLoginCode(
+      val code: String,
+      val button: EmailButton
+    ) : DocumentData
+
+    val nestedLoginCode = NestedLoginCode(
+        code = "123-456",
+        button = EmailButton(
+            color = "#B3B3B3",
+            text = "Login",
+            link = "https://cash.app/login",
+            size = "regular"
+        )
+    )
+
+    val nestedLoginCodeEN_US = DocumentTemplate(
+        fields = mapOf(
+            "subject" to "Your login code is {{code}}",
+            "headline" to "Your login code is {{code}}",
+            "short_description" to "Your login code is {{code}}",
+            "primary_button" to "<Button color=\"{{button.color}}\" size=\"{{button.size}}\">{{button.text}}</Button>",
+            "primary_button_url" to "{{button.link}}",
+            "sms_body" to "Your login code is {{code}}. Go to {{button.link}} to login."
+        ),
+        source = NestedLoginCode::class,
+        targets = setOf(TransactionalEmailDocument::class, TransactionalSmsDocument::class),
+        locale = EN_US
+    )
+
+    val barber = BarbershopBuilder()
+        .installDocument<TransactionalEmailDocument>()
+        .installDocument<TransactionalSmsDocument>()
+        .installDocumentTemplate<NestedLoginCode>(nestedLoginCodeEN_US)
+        .build()
+
+    val emailSpec = barber.getBarber<NestedLoginCode, TransactionalEmailDocument>()
+        .render(nestedLoginCode, EN_US)
+
+    assertThat(emailSpec).isEqualTo(
+        TransactionalEmailDocument(
+            subject = "Your login code is 123-456",
+            headline = "Your login code is 123-456",
+            short_description = "Your login code is 123-456",
+            primary_button = "<Button color=\"#B3B3B3\" size=\"regular\">Login</Button>",
+            primary_button_url = "https://cash.app/login",
+            secondary_button = null,
+            secondary_button_url = null
+        )
+    )
+
+    val smsSpec = barber.getBarber<NestedLoginCode, TransactionalSmsDocument>()
+        .render(nestedLoginCode, EN_US)
+
+    assertThat(smsSpec).isEqualTo(
+        TransactionalSmsDocument(
+            sms_body = "Your login code is 123-456. Go to https://cash.app/login to login."
+        )
     )
   }
 
   @Test
   fun `Can install and render multiple locales`() {
     val barbershop = BarbershopBuilder()
-      .installDocument<TransactionalSmsDocument>()
-      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
-      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_CA)
-      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_GB)
-      .build()
+        .installDocument<TransactionalSmsDocument>()
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_CA)
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_GB)
+        .build()
 
     val recipientReceiptSms = barbershop.getBarber<RecipientReceipt, TransactionalSmsDocument>()
 
@@ -121,17 +190,17 @@ class BarberTest {
   @Test
   fun `Render succeeds by fallback for a requested locale that is not installed`() {
     val barber = BarbershopBuilder()
-      .installDocument<TransactionalSmsDocument>()
-      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
-      .build()
+        .installDocument<TransactionalSmsDocument>()
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
+        .build()
 
     val spec = barber.getBarber<RecipientReceipt, TransactionalSmsDocument>()
-      .render(sandy50Receipt, EN_CA)
+        .render(sandy50Receipt, EN_CA)
 
     assertThat(spec).isEqualTo(
-      TransactionalSmsDocument(
-        sms_body = "Sandy Winchester sent you $50"
-      )
+        TransactionalSmsDocument(
+            sms_body = "Sandy Winchester sent you $50"
+        )
     )
   }
 
@@ -139,15 +208,15 @@ class BarberTest {
   fun `Use custom LocaleResolver that entirely replaces the default LocaleResolver`() {
     val customResolver = MapleSyrupOrFirstLocaleResolver()
     val allLocaleBarbershop = BarbershopBuilder()
-      .installDocument<TransactionalSmsDocument>()
-      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
-      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_CA)
-      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_GB)
-      .setLocaleResolver(customResolver)
-      .build()
+        .installDocument<TransactionalSmsDocument>()
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_CA)
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_GB)
+        .setLocaleResolver(customResolver)
+        .build()
 
     val recipientReceiptSms =
-      allLocaleBarbershop.getBarber<RecipientReceipt, TransactionalSmsDocument>()
+        allLocaleBarbershop.getBarber<RecipientReceipt, TransactionalSmsDocument>()
 
     // You always get EN_CA response back with [MapleSyrupOrFirstLocaleResolver]
     val specEN_US = recipientReceiptSms.render(sandy50Receipt, EN_US)
@@ -159,13 +228,13 @@ class BarberTest {
 
     // ...and if EN_CA is not installed then [MapleSyrupOrFirstLocaleResolver] returns the first option
     val onlyUsBarbershop = BarbershopBuilder()
-      .installDocument<TransactionalSmsDocument>()
-      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
-      .setLocaleResolver(customResolver)
-      .build()
+        .installDocument<TransactionalSmsDocument>()
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
+        .setLocaleResolver(customResolver)
+        .build()
 
     val specEN_US2 = onlyUsBarbershop.getBarber<RecipientReceipt, TransactionalSmsDocument>()
-      .render(sandy50Receipt, EN_CA)
+        .render(sandy50Receipt, EN_CA)
     assertEquals("Sandy Winchester sent you \$50", specEN_US2.sms_body)
   }
 
@@ -173,15 +242,15 @@ class BarberTest {
   fun `Fails when custom LocaleResolver that doesn't respect contract`() {
     val customResolver = BadMapleSyrupLocaleResolver()
     val allLocaleBarbershop = BarbershopBuilder()
-      .installDocument<TransactionalSmsDocument>()
-      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
-      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_CA)
-      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_GB)
-      .setLocaleResolver(customResolver)
-      .build()
+        .installDocument<TransactionalSmsDocument>()
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_CA)
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_GB)
+        .setLocaleResolver(customResolver)
+        .build()
 
     val recipientReceiptSms =
-      allLocaleBarbershop.getBarber<RecipientReceipt, TransactionalSmsDocument>()
+        allLocaleBarbershop.getBarber<RecipientReceipt, TransactionalSmsDocument>()
 
     // You always get EN_CA response back with [BadMapleSyrupLocaleResolver]
     val specEN_US = recipientReceiptSms.render(sandy50Receipt, EN_US)
@@ -193,14 +262,14 @@ class BarberTest {
 
     // ...and if EN_CA is not installed then [BadMapleSyrupLocaleResolver] blows up
     val onlyUsBarbershop = BarbershopBuilder()
-      .installDocument<TransactionalSmsDocument>()
-      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
-      .setLocaleResolver(customResolver)
-      .build()
+        .installDocument<TransactionalSmsDocument>()
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
+        .setLocaleResolver(customResolver)
+        .build()
 
     val exception = assertFailsWith<BarberException> {
       onlyUsBarbershop.getBarber<RecipientReceipt, TransactionalSmsDocument>()
-        .render(sandy50Receipt, EN_CA)
+          .render(sandy50Receipt, EN_CA)
     }
     assertEquals("""
       |Problems
@@ -215,45 +284,45 @@ class BarberTest {
   @Disabled @Test
   fun fieldStemming() {
     val barber = BarbershopBuilder()
-      .installDocument<TransactionalEmailDocument>()
-      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
-      .build()
+        .installDocument<TransactionalEmailDocument>()
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
+        .build()
 
     val spec = barber.getBarber<RecipientReceipt, TransactionalEmailDocument>()
-      .render(sandy50Receipt, EN_US)
+        .render(sandy50Receipt, EN_US)
 
     assertThat(spec).isEqualTo(
-      TransactionalEmailDocument(
-        subject = "Sandy Winchester sent you $50",
-        headline = "You received $50",
-        short_description = "You’ve received a payment from Sandy Winchester! The money will be in your bank account " +
-          "in 2 days.",
-        primary_button = "Cancel this payment",
-        primary_button_url = "https://cash.app/cancel/123",
-        secondary_button = null,
-        secondary_button_url = null
-      )
+        TransactionalEmailDocument(
+            subject = "Sandy Winchester sent you $50",
+            headline = "You received $50",
+            short_description = "You’ve received a payment from Sandy Winchester! The money will be in your bank account " +
+                "in 2 days.",
+            primary_button = "Cancel this payment",
+            primary_button_url = "https://cash.app/cancel/123",
+            secondary_button = null,
+            secondary_button_url = null
+        )
     )
   }
 
   @Disabled @Test
   fun copyUsesFieldThatDoesntExist() {
     val recipientReceiptDocumentData = DocumentTemplate(
-      fields = mapOf(
-        "subject" to "{{sender}} sent you {{totally_invalid_field}}",
-        "headline" to "",
-        "short_description" to "",
-        "primary_button" to "",
-        "primary_button_url" to ""
-      ),
-      source = RecipientReceipt::class,
-      targets = setOf(TransactionalEmailDocument::class),
-      locale = EN_US
+        fields = mapOf(
+            "subject" to "{{sender}} sent you {{totally_invalid_field}}",
+            "headline" to "",
+            "short_description" to "",
+            "primary_button" to "",
+            "primary_button_url" to ""
+        ),
+        source = RecipientReceipt::class,
+        targets = setOf(TransactionalEmailDocument::class),
+        locale = EN_US
     )
 
     val exception = assertFailsWith<BarberException> {
       BarbershopBuilder()
-        .installDocumentTemplate<RecipientReceipt>(recipientReceiptDocumentData)
+          .installDocumentTemplate<RecipientReceipt>(recipientReceiptDocumentData)
     }
     assertThat(exception.problems).containsExactly("""
         |output field 'subject' uses 'totally_invalid_field' but 'RecipientReceipt' has no such field
@@ -269,20 +338,20 @@ class BarberTest {
   @Disabled @Test
   fun copyDoesntOutputFieldThatIsRequired() {
     val recipientReceiptDocumentData = DocumentTemplate(
-      fields = mapOf(
-        "subject" to "",
-        "headline" to "",
-        "primary_button" to "",
-        "primary_button_url" to ""
-      ),
-      source = RecipientReceipt::class,
-      targets = setOf(TransactionalEmailDocument::class),
-      locale = EN_US
+        fields = mapOf(
+            "subject" to "",
+            "headline" to "",
+            "primary_button" to "",
+            "primary_button_url" to ""
+        ),
+        source = RecipientReceipt::class,
+        targets = setOf(TransactionalEmailDocument::class),
+        locale = EN_US
     )
 
     val exception = assertFailsWith<BarberException> {
       BarbershopBuilder()
-        .installDocumentTemplate<RecipientReceipt>(recipientReceiptDocumentData)
+          .installDocumentTemplate<RecipientReceipt>(recipientReceiptDocumentData)
     }
     assertThat(exception.problems).containsExactly("""
         |output field 'short_description' is required but was not found
@@ -293,21 +362,21 @@ class BarberTest {
   @Disabled @Test
   fun copyOutputsFieldThatIsUnknown() {
     val recipientReceiptDocumentData = DocumentTemplate(
-      fields = mapOf(
-        "subject" to "",
-        "headline" to "",
-        "primary_button" to "",
-        "primary_button_url" to "",
-        "tertiary_button_url" to ""
-      ),
-      source = RecipientReceipt::class,
-      targets = setOf(TransactionalEmailDocument::class),
-      locale = EN_US
+        fields = mapOf(
+            "subject" to "",
+            "headline" to "",
+            "primary_button" to "",
+            "primary_button_url" to "",
+            "tertiary_button_url" to ""
+        ),
+        source = RecipientReceipt::class,
+        targets = setOf(TransactionalEmailDocument::class),
+        locale = EN_US
     )
 
     val exception = assertFailsWith<BarberException> {
       BarbershopBuilder()
-        .installDocumentTemplate<RecipientReceipt>(recipientReceiptDocumentData)
+          .installDocumentTemplate<RecipientReceipt>(recipientReceiptDocumentData)
     }
     assertThat(exception.problems).containsExactly("""
         |output field 'tertiary_button_url' is not used
@@ -318,20 +387,20 @@ class BarberTest {
   @Disabled @Test
   fun renderUnknownDocumentData() {
     val recipientReceiptDocumentData = DocumentTemplate(
-      fields = mapOf(
-        "subject" to "",
-        "headline" to "",
-        "short_description" to "",
-        "primary_button" to "",
-        "primary_button_url" to ""
-      ),
-      source = RecipientReceipt::class,
-      targets = setOf(TransactionalEmailDocument::class),
-      locale = EN_US
+        fields = mapOf(
+            "subject" to "",
+            "headline" to "",
+            "short_description" to "",
+            "primary_button" to "",
+            "primary_button_url" to ""
+        ),
+        source = RecipientReceipt::class,
+        targets = setOf(TransactionalEmailDocument::class),
+        locale = EN_US
     )
 
     BarbershopBuilder()
-      .installDocumentTemplate<RecipientReceipt>(recipientReceiptDocumentData)
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptDocumentData)
 
     val exception = assertFailsWith<BarberException> {
       // TODO confirm failure when render (SenderReceipt::class, TransactionalEmailDocument::class)
@@ -346,20 +415,20 @@ class BarberTest {
   @Disabled @Test
   fun renderUnknownDocument() {
     val recipientReceiptDocumentData = DocumentTemplate(
-      fields = mapOf(
-        "subject" to "",
-        "headline" to "",
-        "short_description" to "",
-        "primary_button" to "",
-        "primary_button_url" to ""
-      ),
-      source = RecipientReceipt::class,
-      targets = setOf(TransactionalEmailDocument::class),
-      locale = EN_US
+        fields = mapOf(
+            "subject" to "",
+            "headline" to "",
+            "short_description" to "",
+            "primary_button" to "",
+            "primary_button_url" to ""
+        ),
+        source = RecipientReceipt::class,
+        targets = setOf(TransactionalEmailDocument::class),
+        locale = EN_US
     )
 
     BarbershopBuilder()
-      .installDocumentTemplate<RecipientReceipt>(recipientReceiptDocumentData)
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptDocumentData)
 
     val exception = assertFailsWith<BarberException> {
       // TODO confirm failure when render (RecipientReceipt::class, SmsDocument::class)
