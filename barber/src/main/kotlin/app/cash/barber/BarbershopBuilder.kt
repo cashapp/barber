@@ -1,15 +1,15 @@
 package app.cash.barber
 
-import com.github.mustachejava.DefaultMustacheFactory
-import com.github.mustachejava.Mustache
-import com.google.common.collect.HashBasedTable
-import com.google.common.collect.Table
 import app.cash.barber.models.BarberKey
 import app.cash.barber.models.CompiledDocumentTemplate
 import app.cash.barber.models.Document
 import app.cash.barber.models.DocumentData
 import app.cash.barber.models.DocumentTemplate
 import app.cash.barber.models.Locale
+import com.github.mustachejava.DefaultMustacheFactory
+import com.github.mustachejava.Mustache
+import com.google.common.collect.HashBasedTable
+import com.google.common.collect.Table
 import java.io.StringReader
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
@@ -17,7 +17,7 @@ import kotlin.reflect.full.primaryConstructor
 
 class BarbershopBuilder : Barbershop.Builder {
   private val installedDocumentTemplates: Table<KClass<out DocumentData>, Locale, DocumentTemplate> =
-    HashBasedTable.create()
+      HashBasedTable.create()
   private val installedDocument: MutableSet<KClass<out Document>> = mutableSetOf()
   private val mustacheFactory = DefaultMustacheFactory()
   private var localeResolver: LocaleResolver = MatchOrFirstLocaleResolver()
@@ -28,7 +28,8 @@ class BarbershopBuilder : Barbershop.Builder {
   ) = apply {
     val installedDocumentTemplatesHasKey = installedDocumentTemplates.containsRow(documentDataClass)
     val installedDocumentTemplateIsNotAlreadyInstalled =
-      installedDocumentTemplates.get(documentDataClass, documentTemplate.locale) == documentTemplate
+      installedDocumentTemplates.get(documentDataClass,
+          documentTemplate.locale) == documentTemplate
     if (installedDocumentTemplatesHasKey && installedDocumentTemplateIsNotAlreadyInstalled) {
       throw BarberException(problems = listOf("""
         |Attempted to install DocumentTemplate that will overwrite an already installed DocumentTemplate with locale
@@ -87,6 +88,21 @@ class BarbershopBuilder : Barbershop.Builder {
           """.trimMargin())
       }
 
+      // DocumentTemplates must only use fields from source DocumentData in their fields
+      documentDataClass.primaryConstructor?.let { documentDataConstructor ->
+        val documentDataParameterNames = documentDataConstructor.parameters.map { it.name }.toList()
+        val compiledFieldsCodes = getFieldsCodes(documentTemplate)
+        compiledFieldsCodes.forEach { (name, codes) ->
+          // Check for missing variables in field templates
+          codes.forEach { code ->
+            if (code != null && !documentDataParameterNames.contains(code.split(".").first())) {
+              problems.add(
+                  "Missing variable [$code] in DocumentData [$documentDataClass] for DocumentTemplate field [${documentTemplate.fields[name]}]")
+            }
+          }
+        }
+      }
+
       // Document targets must have primaryConstructor
       // and installedDocumentTemplates must be able to fulfill Document target parameter requirements
       val documents = documentTemplate.targets
@@ -117,8 +133,33 @@ class BarbershopBuilder : Barbershop.Builder {
         }
       }
     }
+
+    // Check for unused DocumentData variable not used in any installed DocumentTemplate field
+    installedDocumentTemplates.rowMap().forEach { (documentDataClass, documentTemplates) ->
+      val codes = documentTemplates.mapValues { (_, documentTemplate) ->
+        getFieldsCodes(documentTemplate).values.reduce { acc, codes -> acc + codes }.toSet()
+      }.values.reduce { acc, codes -> acc + codes }.toSet()
+      documentDataClass.primaryConstructor?.let { documentDataConstructor ->
+        val documentDataParameterNames = documentDataConstructor.parameters.map { it.name }.toList()
+        documentDataParameterNames.forEach { parameter ->
+          if (!codes.map { it?.split(".")?.first() }.contains(parameter)) {
+            problems.add("""
+              |Unused DocumentData variable [$parameter] in [$documentDataClass] with no usage in installed DocumentTemplate Locales:
+              |${documentTemplates.keys.joinToString("\n")}
+            """.trimMargin())
+          }
+        }
+      }
+    }
+
     if (problems.isNotEmpty()) {
       throw BarberException(problems = problems)
+    }
+  }
+
+  private fun getFieldsCodes(documentTemplate: DocumentTemplate): Map<String, List<String?>> {
+    return documentTemplate.fields.mapValues { (_, template) ->
+      mustacheFactory.compile(StringReader(template), template).codes.map { it.name }
     }
   }
 
@@ -141,10 +182,10 @@ class BarbershopBuilder : Barbershop.Builder {
     documentTemplates.values.forEach { documentTemplate: DocumentTemplate ->
       if (!documentTemplate.targets.contains(documentClass)) {
         throw BarberException(problems = listOf("""
-        |Specified target $documentClass not a valid target for DocumentData's corresponding DocumentTemplate.
-        |Valid targets:
-        |${documentTemplate.targets}
-        """.trimMargin()))
+          |Specified target $documentClass not a valid target for DocumentData's corresponding DocumentTemplate.
+          |Valid targets:
+          |${documentTemplate.targets}
+          """.trimMargin()))
       }
     }
 
@@ -155,7 +196,8 @@ class BarbershopBuilder : Barbershop.Builder {
     return RealBarber(
       documentConstructor = documentConstructor,
       documentParametersByName = documentParametersByName,
-      compiledDocumentTemplateLocales = compileDocumentTemplates(documentTemplates, documentParametersByName),
+      compiledDocumentTemplateLocales = compileDocumentTemplates(documentTemplates,
+          documentParametersByName),
       localeResolver = localeResolver)
   }
 

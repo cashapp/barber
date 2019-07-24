@@ -74,6 +74,15 @@ class BarbershopBuilderTest {
       |Not installed DocumentTemplate.targets:
       |[class app.cash.barber.examples.TransactionalSmsDocument]
       |
+      |3) Missing variable [sender] in DocumentData [class app.cash.barber.examples.SenderReceipt] for DocumentTemplate field [{{sender}} sent you {{amount}}]
+      |
+      |4) Missing variable [sender] in DocumentData [class app.cash.barber.examples.SenderReceipt] for DocumentTemplate field [You’ve received a payment from {{sender}}! The money will be in your bank account {{deposit_expected_at.casual}}.]
+      |
+      |5) Missing variable [sender] in DocumentData [class app.cash.barber.examples.SenderReceipt] for DocumentTemplate field [{{sender}} sent you {{amount}}]
+      |
+      |6) Unused DocumentData variable [recipient] in [class app.cash.barber.examples.SenderReceipt] with no usage in installed DocumentTemplate Locales:
+      |Locale(locale=en-US)
+      |
       """.trimMargin(), exception.toString())
   }
 }

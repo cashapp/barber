@@ -1,8 +1,6 @@
 package app.cash.barber.examples
 
-import app.cash.barber.models.DocumentData
 import app.cash.barber.models.DocumentTemplate
-import app.cash.barber.models.Locale
 import app.cash.barber.models.Locale.Companion.EN_CA
 import app.cash.barber.models.Locale.Companion.EN_GB
 import app.cash.barber.models.Locale.Companion.EN_US
@@ -12,7 +10,7 @@ val recipientReceiptSmsDocumentTemplateEN_US = DocumentTemplate(
     "subject" to "{{sender}} sent you {{amount}}",
     "headline" to "You received {{amount}}",
     "short_description" to "You’ve received a payment from {{sender}}! The money will be in your bank account " +
-      "{{deposit_expected_at_casual}}.",
+      "{{deposit_expected_at.casual}}.",
     "primary_button" to "Cancel this payment",
     "primary_button_url" to "{{cancelUrl}}",
     "sms_body" to "{{sender}} sent you {{amount}}"
