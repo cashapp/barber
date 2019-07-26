@@ -329,10 +329,8 @@ class BarberTest {
           .installDocumentTemplate<TradeReceipt>(tradeReceiptEN_US)
           .build()
     }
-    assertThat(exception.problems).containsExactly("Unused DocumentData variable [shares] in " +
-        "[class app.cash.barber.BarberTest\$Fails when variable in data is not used in any field " +
-        "template\$TradeReceipt] with no usage in installed DocumentTemplate Locales:\n" +
-        "Locale(locale=en-US)")
+    assertThat(exception.problems).containsExactly("Unused DocumentData variable [shares] in [class app.cash.barber.BarberTest\$Fails when variable in data is not used in any field template\$TradeReceipt] with no usage in installed DocumentTemplate Locales:\n" +
+      "Locale(locale=en-US)")
   }
 
   @Disabled @Test
