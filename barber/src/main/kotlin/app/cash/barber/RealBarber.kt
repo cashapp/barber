@@ -8,11 +8,9 @@ import app.cash.barber.models.DocumentData
 import app.cash.barber.models.Locale
 import java.io.StringWriter
 import kotlin.reflect.KFunction
-import kotlin.reflect.KParameter
 
 class RealBarber<C : DocumentData, D : Document>(
   private val documentConstructor: KFunction<D>,
-  private val documentParametersByName: Map<String?, KParameter>,
   private val compiledDocumentTemplateLocales: Map<Locale, CompiledDocumentTemplate>,
   private val localeResolver: LocaleResolver
 ) : Barber<C, D> {
@@ -27,6 +25,7 @@ class RealBarber<C : DocumentData, D : Document>(
     }
 
     // Zips the KParameters with corresponding rendered values from DocumentTemplate
+    val documentParametersByName = documentConstructor.asParameterNames()
     val parameters = renderedDocumentDataFields.filter {
       documentParametersByName.containsKey(it.key)
     }.mapKeys {

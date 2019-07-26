@@ -281,6 +281,58 @@ class BarberTest {
     """.trimMargin(), exception.toString())
   }
 
+  @Test
+  fun `Fails when variable in field template is not in source DocumentData`() {
+    data class TradeReceipt(
+      val ticker: String
+    ) : DocumentData
+
+    val tradeReceiptEN_US = DocumentTemplate(
+        fields = mapOf(
+            "sms_body" to "You bought {{ shares }} shares of {{ ticker }}."
+        ),
+        source = TradeReceipt::class,
+        targets = setOf(TransactionalSmsDocument::class),
+        locale = EN_US
+    )
+
+    val exception = assertFailsWith<BarberException> {
+      BarbershopBuilder()
+          .installDocument<TransactionalSmsDocument>()
+          .installDocumentTemplate<TradeReceipt>(tradeReceiptEN_US)
+          .build()
+    }
+    assertThat(exception.problems).containsExactly("Missing variable [shares] in DocumentData " +
+        "[class app.cash.barber.BarberTest\$Fails when variable in field template is not in " +
+        "source DocumentData\$TradeReceipt] for DocumentTemplate field [You bought {{ shares }} shares of {{ ticker }}.]")
+  }
+
+  @Test
+  fun `Fails when variable in data is not used in any field template`() {
+    data class TradeReceipt(
+      val ticker: String,
+      val shares: String
+    ) : DocumentData
+
+    val tradeReceiptEN_US = DocumentTemplate(
+        fields = mapOf(
+            "sms_body" to "Welcome to the {{ ticker }} shareholder family!"
+        ),
+        source = TradeReceipt::class,
+        targets = setOf(TransactionalSmsDocument::class),
+        locale = EN_US
+    )
+
+    val exception = assertFailsWith<BarberException> {
+      BarbershopBuilder()
+          .installDocument<TransactionalSmsDocument>()
+          .installDocumentTemplate<TradeReceipt>(tradeReceiptEN_US)
+          .build()
+    }
+    assertThat(exception.problems).containsExactly("Unused DocumentData variable [shares] in [class app.cash.barber.BarberTest\$Fails when variable in data is not used in any field template\$TradeReceipt] with no usage in installed DocumentTemplate Locales:\n" +
+      "Locale(locale=en-US)")
+  }
+
   @Disabled @Test
   fun fieldStemming() {
     val barber = BarbershopBuilder()
