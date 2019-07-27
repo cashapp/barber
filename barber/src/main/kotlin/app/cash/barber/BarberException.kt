@@ -16,9 +16,13 @@ class BarberException(
   val problems: List<String>
 ) : IllegalStateException() {
   override fun toString(): String {
+    val sanitizedProblems = problems
+      .map { it.replace("$", "::") }
+      .mapIndexed { index, s -> "${index + 1}) $s\n" }
+      .joinToString("\n")
     return """
       |Problems
-      |${this.problems.mapIndexed { index, s -> "${index + 1}) $s\n" }.joinToString("\n")}
+      |$sanitizedProblems
     """.trimMargin()
   }
 }
