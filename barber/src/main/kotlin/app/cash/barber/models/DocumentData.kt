@@ -1,7 +1,5 @@
 package app.cash.barber.models
 
-import kotlin.reflect.KClass
-
 /**
  * This is a schema that specifies the input values for a DocumentTemplate template.
  *

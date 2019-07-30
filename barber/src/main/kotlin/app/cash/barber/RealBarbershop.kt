@@ -18,9 +18,9 @@ internal class RealBarbershop(
       val problems = mutableListOf<String>()
       val documentInstalled = barbers.keys.any { it.document == documentClass }
       val documentDataInstalled = barbers.keys.any { it.documentData == documentDataClass }
-      problems.add("Failed to get Barber<$documentDataClass, $documentClass>")
       if (documentInstalled && documentDataInstalled) {
         problems.add("""
+          |Failed to get Barber<$documentDataClass, $documentClass>
           |Requested Document [$documentClass] is installed
           |Requested DocumentData [$documentDataClass] is installed
           |DocumentTemplate with source=[$documentDataClass] does not have target=[$documentClass]
@@ -28,11 +28,13 @@ internal class RealBarbershop(
       }
       if (!documentInstalled) {
         problems.add("""
+          |Failed to get Barber<$documentDataClass, $documentClass>
           |Document [$documentClass] is not installed in Barbershop
         """.trimMargin())
       }
       if (!documentDataInstalled) {
         problems.add("""
+          |Failed to get Barber<$documentDataClass, $documentClass>
           |DocumentData [$documentDataClass] and corresponding DocumentTemplate(s) are not installed in Barbershop
         """.trimMargin())
       }

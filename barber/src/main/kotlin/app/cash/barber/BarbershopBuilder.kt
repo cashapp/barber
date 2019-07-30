@@ -97,19 +97,19 @@ class BarbershopBuilder : Barbershop.Builder {
 
     cellSet().forEach { cell ->
       val documentDataClass = cell.rowKey!!
-      val documentTemplate = cell.value!!
+      val compiledDocumentTemplate = cell.value!!
 
       // DocumentTemplate must be installed with a DocumentData that is listed in its Source
-      if (documentDataClass != documentTemplate.source) {
+      if (documentDataClass != compiledDocumentTemplate.source) {
         problems.add("""
           |Attempted to install DocumentTemplate with a DocumentData not specified in the DocumentTemplate source.
-          |DocumentTemplate.source: ${documentTemplate.source}
+          |DocumentTemplate.source: ${compiledDocumentTemplate.source}
           |DocumentData: $documentDataClass
           """.trimMargin())
       }
 
       // Documents listed in DocumentTemplate.Targets must be installed
-      val notInstalledDocument = documentTemplate.targets.filter {
+      val notInstalledDocument = compiledDocumentTemplate.targets.filter {
         !installedDocument.contains(it)
       }
       if (notInstalledDocument.isNotEmpty()) {
@@ -123,19 +123,19 @@ class BarbershopBuilder : Barbershop.Builder {
       // DocumentTemplates must only use variables from source DocumentData in their fields
       val documentDataConstructor = documentDataClass.primaryConstructor!!
       val documentDataParameterNames = documentDataConstructor.asParameterNames()
-      documentTemplate.fields.asFieldCodesMap().forEach { (name, codes) ->
+      compiledDocumentTemplate.fields.asFieldCodesMap().forEach { (name, codes) ->
         // Check for missing variables in field templates
         codes.forEach { code ->
           if (!documentDataParameterNames.contains(code.rootKey())) {
             problems.add(
-              "Missing variable [$code] in DocumentData [$documentDataClass] for DocumentTemplate field [${documentTemplate.toDocumentTemplate().fields[name]}]")
+              "Missing variable [$code] in DocumentData [$documentDataClass] for DocumentTemplate field [${compiledDocumentTemplate.fields[name].asString()}]")
           }
         }
       }
 
       // Document targets must have primaryConstructor
       // and installedDocumentTemplates must be able to fulfill Document target parameter requirements
-      val allTargetParameters = documentTemplate.targets.map { documentClass ->
+      val allTargetParameters = compiledDocumentTemplate.targets.map { documentClass ->
         // Validate that Document has a Primary Constructor
         val documentConstructor = documentClass.primaryConstructor
         if (documentConstructor == null) {
@@ -155,27 +155,26 @@ class BarbershopBuilder : Barbershop.Builder {
       }.map { it.name }
 
       // Confirm that required field keys are present in installedDocumentTemplates
-      if (!documentTemplate.fields.keys.containsAll(requiredTargetFields)) {
+      if (!compiledDocumentTemplate.fields.keys.containsAll(requiredTargetFields)) {
         val missingFields = requiredTargetFields.filter {
-          !documentTemplate.fields.containsKey(it)
+          !compiledDocumentTemplate.fields.containsKey(it)
         }
-        val documentsThatRequireMissingField = documentTemplate.targets.map { documentClass ->
+        val documentsThatRequireMissingField = compiledDocumentTemplate.targets.map { documentClass ->
           documentClass to documentClass.primaryConstructor!!.parameters.map { it.name }.filter {
             missingFields.contains(it)
           }
         }.toMap().map { "[${it.key}] requires missing fields ${it.value}" }.joinToString("\n")
-
 
         problems.add("""
               |Installed DocumentTemplate missing required fields for Document targets
               |Missing fields:
               |$documentsThatRequireMissingField
               |
-              |DocumentTemplate: ${documentTemplate.toDocumentTemplate()}
+              |DocumentTemplate: ${compiledDocumentTemplate.toDocumentTemplate()}
               """.trimMargin())
       }
-      if (documentTemplate.fields.keys.size > allTargetFields.size) {
-        val additionalFields = documentTemplate.fields.keys.filter { field ->
+      if (compiledDocumentTemplate.fields.keys.size > allTargetFields.size) {
+        val additionalFields = compiledDocumentTemplate.fields.keys.filter { field ->
           !allTargetFields.contains(field)
         }
         problems.add("""
@@ -185,9 +184,7 @@ class BarbershopBuilder : Barbershop.Builder {
             """.trimMargin())
       }
 
-
-
-      documentTemplate.targets.forEach { documentClass ->
+      compiledDocumentTemplate.targets.forEach { documentClass ->
         // Lookup installed DocumentTemplates that corresponds to DocumentData
         val documentTemplates = row(documentDataClass)
 

@@ -26,6 +26,12 @@ internal fun MutableMap<Locale, CompiledDocumentTemplate>.reducedFieldCodeSet() 
 
 internal fun KFunction<*>.asParameterNames() = parameters.associateBy { it.name }
 
+internal fun Mustache?.asString(): String = if (this == null) {
+  ""
+} else {
+  name
+}
+
 /**
  * Nested objects is supported in DocumentData but makes variable validation more of a challenge.
  * Mustache templates referencing nested objects have keys with the flattened hierarchy separated by dots

@@ -11,8 +11,6 @@ import app.cash.barber.examples.senderReceiptEmailDocumentTemplateEN_US
 import app.cash.barber.models.DocumentData
 import app.cash.barber.models.DocumentTemplate
 import app.cash.barber.models.Locale
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -58,7 +56,6 @@ class BarbershopBuilderTest {
         |
       """.trimMargin(),
       exception.toString())
-
   }
 
   @Test
@@ -75,7 +72,6 @@ class BarbershopBuilderTest {
         |
       """.trimMargin(),
       exception.toString())
-
   }
 
   @Test
@@ -319,37 +315,6 @@ class BarbershopBuilderTest {
         | targets = [class app.cash.barber.examples.TransactionalSmsDocument],
         | locale = [Locale=en-US]
         |)
-        |
-      """.trimMargin(),
-      exception.toString())
-  }
-
-  @Disabled @Test
-  fun `Fails on a non supported DocumentData unit`() {
-    data class StrangeUnitDocumentData(
-      val strange: Unit
-    ) : DocumentData
-
-    val strangeUnitEN_US = DocumentTemplate(
-      fields = mapOf(
-        "sms_body" to "That's {{ strange }}"
-      ),
-      source = StrangeUnitDocumentData::class,
-      targets = setOf(TransactionalSmsDocument::class),
-      locale = Locale.EN_US
-    )
-
-    val exception = assertFailsWith<BarberException> {
-      BarbershopBuilder()
-        .installDocument<TransactionalEmailDocument>()
-        .installDocument<TransactionalSmsDocument>()
-        .installDocumentTemplate<StrangeUnitDocumentData>(strangeUnitEN_US)
-        .build()
-    }
-    assertEquals(
-      """
-        |Problems
-        |1) ...
         |
       """.trimMargin(),
       exception.toString())

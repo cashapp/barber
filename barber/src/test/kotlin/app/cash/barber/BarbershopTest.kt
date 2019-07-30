@@ -55,8 +55,7 @@ class BarbershopTest {
       """
         |Problems
         |1) Failed to get Barber<class app.cash.barber.examples.RecipientReceipt, class app.cash.barber.examples.TransactionalEmailDocument>
-        |
-        |2) Requested Document [class app.cash.barber.examples.TransactionalEmailDocument] is installed
+        |Requested Document [class app.cash.barber.examples.TransactionalEmailDocument] is installed
         |Requested DocumentData [class app.cash.barber.examples.RecipientReceipt] is installed
         |DocumentTemplate with source=[class app.cash.barber.examples.RecipientReceipt] does not have target=[class app.cash.barber.examples.TransactionalEmailDocument]
         |
@@ -78,8 +77,7 @@ class BarbershopTest {
       """
         |Problems
         |1) Failed to get Barber<class app.cash.barber.examples.RecipientReceipt, class app.cash.barber.examples.TransactionalEmailDocument>
-        |
-        |2) Document [class app.cash.barber.examples.TransactionalEmailDocument] is not installed in Barbershop
+        |Document [class app.cash.barber.examples.TransactionalEmailDocument] is not installed in Barbershop
         |
       """.trimMargin(),
       exception.toString())
