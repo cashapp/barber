@@ -29,7 +29,10 @@ class BarbershopBuilder : Barbershop.Builder {
         |${documentTemplate.locale}.
         |Already Installed
         |DocumentData: $documentDataClass
-        |DocumentTemplate: ${installedDocumentTemplates.row(documentDataClass)}
+        |Locales:
+        |${installedDocumentTemplates.row(documentDataClass).keys.joinToString("\n")}
+        |DocumentTemplates: [
+        |${installedDocumentTemplates.row(documentDataClass).values.joinToString("\n")}]
         |
         |Attempted to Install
         |$documentTemplate
@@ -60,21 +63,53 @@ class BarbershopBuilder : Barbershop.Builder {
   private fun Table<KClass<out DocumentData>, Locale, CompiledDocumentTemplate>.validate() = apply {
     val problems: MutableList<String> = mutableListOf()
 
+    // Barber elements must be installed
+    if (cellSet().isEmpty()) {
+      problems.add("""
+        |No DocumentData or DocumentTemplates installed
+      """.trimMargin())
+    }
+    if (installedDocument.isEmpty()) {
+      problems.add("""
+        |No Documents installed
+      """.trimMargin())
+    }
+
+    if (problems.isNotEmpty()) {
+      throw BarberException(problems)
+    }
+
+    // All installed Documents must be used
+    val usedDocuments = cellSet().map { it.value!!.targets }
+    val b = usedDocuments.reduce { acc, targets ->
+      acc + targets
+    }.toSet()
+    if (!b.containsAll(installedDocument)) {
+      val danglingDocuments = installedDocument.filter { document ->
+        !b.contains(document)
+      }
+      problems.add("""
+      |Document installed that is not used in any installed DocumentTemplates
+      |$danglingDocuments
+      |
+    """.trimMargin())
+    }
+
     cellSet().forEach { cell ->
       val documentDataClass = cell.rowKey!!
-      val documentTemplate = cell.value!!
+      val compiledDocumentTemplate = cell.value!!
 
       // DocumentTemplate must be installed with a DocumentData that is listed in its Source
-      if (documentDataClass != documentTemplate.source) {
+      if (documentDataClass != compiledDocumentTemplate.source) {
         problems.add("""
           |Attempted to install DocumentTemplate with a DocumentData not specified in the DocumentTemplate source.
-          |DocumentTemplate.source: ${documentTemplate.source}
+          |DocumentTemplate.source: ${compiledDocumentTemplate.source}
           |DocumentData: $documentDataClass
           """.trimMargin())
       }
 
       // Documents listed in DocumentTemplate.Targets must be installed
-      val notInstalledDocument = documentTemplate.targets.filter {
+      val notInstalledDocument = compiledDocumentTemplate.targets.filter {
         !installedDocument.contains(it)
       }
       if (notInstalledDocument.isNotEmpty()) {
@@ -88,43 +123,68 @@ class BarbershopBuilder : Barbershop.Builder {
       // DocumentTemplates must only use variables from source DocumentData in their fields
       val documentDataConstructor = documentDataClass.primaryConstructor!!
       val documentDataParameterNames = documentDataConstructor.asParameterNames()
-      documentTemplate.fields.asFieldCodesMap().forEach { (name, codes) ->
+      compiledDocumentTemplate.fields.asFieldCodesMap().forEach { (name, codes) ->
         // Check for missing variables in field templates
         codes.forEach { code ->
           if (!documentDataParameterNames.contains(code.rootKey())) {
             problems.add(
-              "Missing variable [$code] in DocumentData [$documentDataClass] for DocumentTemplate field [${documentTemplate.fields[name]?.name}]")
+              "Missing variable [$code] in DocumentData [$documentDataClass] for DocumentTemplate field [${compiledDocumentTemplate.fields[name].asString()}]")
           }
         }
       }
 
       // Document targets must have primaryConstructor
       // and installedDocumentTemplates must be able to fulfill Document target parameter requirements
-      documentTemplate.targets.forEach { documentClass ->
+      val allTargetParameters = compiledDocumentTemplate.targets.map { documentClass ->
         // Validate that Document has a Primary Constructor
         val documentConstructor = documentClass.primaryConstructor
         if (documentConstructor == null) {
           problems.add("No primary constructor for Document class ${documentClass::class}.")
+          listOf()
         } else {
-          // Determine non-nullable required parameters
-          val requiredParameterNames = documentConstructor.parameters.filter {
-            !it.type.isMarkedNullable
-          }.map { it.name }
-
-          // Confirm that required field keys are present in installedDocumentTemplates
-          if (!documentTemplate.fields.keys.containsAll(requiredParameterNames)) {
-            val missingFields = requiredParameterNames.filter {
-              !documentTemplate.fields.containsKey(it)
-            }
-            problems.add("""
-              |Installed DocumentTemplate lacks the required non-null fields for Document target
-              |Missing fields: $missingFields
-              |Document target: ${documentClass::class}
-              |DocumentTemplate: $documentTemplate
-              """.trimMargin())
-          }
+          documentConstructor.parameters
         }
+      }.reduce { acc, params ->
+        acc + params
+      }.toSet()
+      val allTargetFields = allTargetParameters.map {
+        it.name
+      }
+      val requiredTargetFields = allTargetParameters.filter {
+        !it.type.isMarkedNullable
+      }.map { it.name }
 
+      // Confirm that required field keys are present in installedDocumentTemplates
+      if (!compiledDocumentTemplate.fields.keys.containsAll(requiredTargetFields)) {
+        val missingFields = requiredTargetFields.filter {
+          !compiledDocumentTemplate.fields.containsKey(it)
+        }
+        val documentsThatRequireMissingField = compiledDocumentTemplate.targets.map { documentClass ->
+          documentClass to documentClass.primaryConstructor!!.parameters.map { it.name }.filter {
+            missingFields.contains(it)
+          }
+        }.toMap().map { "[${it.key}] requires missing fields ${it.value}" }.joinToString("\n")
+
+        problems.add("""
+              |Installed DocumentTemplate missing required fields for Document targets
+              |Missing fields:
+              |$documentsThatRequireMissingField
+              |
+              |DocumentTemplate: ${compiledDocumentTemplate.toDocumentTemplate()}
+              """.trimMargin())
+      }
+      if (compiledDocumentTemplate.fields.keys.size > allTargetFields.size) {
+        val additionalFields = compiledDocumentTemplate.fields.keys.filter { field ->
+          !allTargetFields.contains(field)
+        }
+        problems.add("""
+              |Installed DocumentTemplate has additional fields that are not used in any target Document
+              |Additional fields:
+              |${additionalFields.joinToString("\n")}
+            """.trimMargin())
+      }
+
+      compiledDocumentTemplate.targets.forEach { documentClass ->
         // Lookup installed DocumentTemplates that corresponds to DocumentData
         val documentTemplates = row(documentDataClass)
 

@@ -7,6 +7,15 @@ import app.cash.barber.models.Locale.Companion.EN_US
 
 val recipientReceiptSmsDocumentTemplateEN_US = DocumentTemplate(
   fields = mapOf(
+    "sms_body" to "{{sender}} sent you {{amount}}. It will be available at {{ deposit_expected_at }}. Cancel here: {{ cancelUrl }}"
+  ),
+  source = RecipientReceipt::class,
+  targets = setOf(TransactionalSmsDocument::class),
+  locale = EN_US
+)
+
+val recipientReceiptSmsEmailDocumentTemplateEN_US = DocumentTemplate(
+  fields = mapOf(
     "subject" to "{{sender}} sent you {{amount}}",
     "headline" to "You received {{amount}}",
     "short_description" to "You’ve received a payment from {{sender}}! The money will be in your bank account " +
@@ -16,7 +25,21 @@ val recipientReceiptSmsDocumentTemplateEN_US = DocumentTemplate(
     "sms_body" to "{{sender}} sent you {{amount}}"
   ),
   source = RecipientReceipt::class,
-  targets = setOf(TransactionalSmsDocument::class),
+  targets = setOf(TransactionalEmailDocument::class, TransactionalSmsDocument::class),
+  locale = EN_US
+)
+
+val senderReceiptEmailDocumentTemplateEN_US = DocumentTemplate(
+  fields = mapOf(
+    "subject" to "You sent {{amount}} to {{recipient}}",
+    "headline" to "You sent {{amount}}",
+    "short_description" to "You sent a payment to {{recipient}}! The money will be in their bank account " +
+      "{{deposit_expected_at.casual}}.",
+    "primary_button" to "Cancel this payment",
+    "primary_button_url" to "{{cancelUrl}}"
+  ),
+  source = SenderReceipt::class,
+  targets = setOf(TransactionalEmailDocument::class),
   locale = EN_US
 )
 

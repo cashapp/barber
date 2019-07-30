@@ -24,6 +24,17 @@ data class DocumentTemplate(
   val targets: Set<KClass<out Document>>,
   val locale: Locale
 ) {
+  override fun toString(): String = """
+    |DocumentTemplate(
+    | fields = mapOf(
+    |   ${fields.map { "$it" }.joinToString("\n")}
+    | ),
+    | source = $source,
+    | targets = $targets,
+    | locale = $locale
+    |)
+  """.trimMargin()
+
   fun compile(mustacheFactory: MustacheFactory): CompiledDocumentTemplate {
     // Pre-compile Mustache templates
     val documentDataFields: MutableMap<String, Mustache?> =
@@ -36,10 +47,18 @@ data class DocumentTemplate(
     // In the Parameters Map in the Document constructor though, all parameter keys must be present (including
     // nullable)
     val combinedDocumentParameterNames = targets.map { target ->
-      target.primaryConstructor!!.asParameterNames().keys.filterNotNull()
-    }.reduce { acc, names -> acc + names }.toSet()
+      target.primaryConstructor!!.asParameterNames()
+    }.map {
+      it.entries
+    }.reduce { acc, entries ->
+      acc + entries
+    }.filter {
+      it.value.type.isMarkedNullable
+    }.mapNotNull {
+      it.key
+    }.toSet()
 
-    // Initialize keys for missing fields in DocumentTemplate
+    // Initialize keys for missing nullable fields in DocumentTemplate
     combinedDocumentParameterNames.mapNotNull { documentDataFields.putIfAbsent(it, null) }
 
     return CompiledDocumentTemplate(

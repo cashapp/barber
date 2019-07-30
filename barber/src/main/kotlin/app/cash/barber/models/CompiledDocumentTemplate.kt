@@ -1,5 +1,6 @@
 package app.cash.barber.models
 
+import app.cash.barber.asString
 import com.github.mustachejava.Mustache
 import kotlin.reflect.KClass
 
@@ -14,4 +15,13 @@ data class CompiledDocumentTemplate(
   val source: KClass<out DocumentData>,
   val targets: Set<KClass<out Document>>,
   val locale: Locale
-)
+) {
+  override fun toString(): String = toDocumentTemplate().toString()
+
+  fun toDocumentTemplate() = DocumentTemplate(
+    fields = this.fields.mapValues { it.value.asString() },
+    source = this.source,
+    targets = this.targets,
+    locale = this.locale
+  )
+}
