@@ -13,11 +13,11 @@ import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
 
 class BarbershopBuilder : Barbershop.Builder {
-  private val installedDocumentTemplates: Table<KClass<out DocumentData>, Locale, CompiledDocumentTemplate> =
-    HashBasedTable.create()
-  private val installedDocument: MutableSet<KClass<out Document>> = mutableSetOf()
+  private val installedDocumentTemplates =
+    HashBasedTable.create<KClass<out DocumentData>, Locale, CompiledDocumentTemplate>()
+  private val installedDocument = mutableSetOf<KClass<out Document>>()
   private val mustacheFactory = DefaultMustacheFactory()
-  private var localeResolver: LocaleResolver = MatchOrFirstLocaleResolver()
+  private var localeResolver: LocaleResolver = MatchOrFirstLocaleResolver
 
   override fun installDocumentTemplate(
     documentDataClass: KClass<out DocumentData>,
@@ -58,7 +58,8 @@ class BarbershopBuilder : Barbershop.Builder {
   override fun build(): Barbershop = installedDocumentTemplates.validate().asBarbershop()
 
   /**
-   * Validates BarbershopBuilder inputs and returns a Barbershop instance with the installed and validated elements
+   * Validates BarbershopBuilder inputs and returns a Barbershop instance with the installed and
+   * validated elements.
    */
   private fun Table<KClass<out DocumentData>, Locale, CompiledDocumentTemplate>.validate() = apply {
     val problems: MutableList<String> = mutableListOf()
@@ -80,13 +81,12 @@ class BarbershopBuilder : Barbershop.Builder {
     }
 
     // All installed Documents must be used
-    val usedDocuments = cellSet().map { it.value!!.targets }
-    val b = usedDocuments.reduce { acc, targets ->
+    val usedDocuments = cellSet().map { it.value!!.targets }.reduce { acc, targets ->
       acc + targets
     }.toSet()
-    if (!b.containsAll(installedDocument)) {
+    if (!usedDocuments.containsAll(installedDocument)) {
       val danglingDocuments = installedDocument.filter { document ->
-        !b.contains(document)
+        !usedDocuments.contains(document)
       }
       problems.add("""
       |Document installed that is not used in any installed DocumentTemplates

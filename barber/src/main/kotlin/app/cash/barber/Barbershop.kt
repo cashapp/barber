@@ -7,7 +7,7 @@ import app.cash.barber.models.DocumentTemplate
 import kotlin.reflect.KClass
 
 /**
- * Holds validated elements that have eagerly built Barbers between type [DocumentData] and [Document]
+ * A registry of templates with their input document data types and their output document types.
  */
 interface Barbershop {
   fun <DD : DocumentData, D : Document> getBarber(
@@ -15,12 +15,12 @@ interface Barbershop {
     documentClass: KClass<out D>
   ): Barber<DD, D>
 
-  fun getAllBarbers(): Map<BarberKey, Barber<DocumentData, Document>>
+  fun getAllBarbers(): Map<BarberKey, Barber<*, *>>
 
   interface Builder {
     /**
-     * Consumes a [DocumentData] and corresponding [DocumentTemplate] and persists in-memory
-     * At boot, a service will call [installDocumentTemplate] on all [DocumentData] and [DocumentTemplate] to add to the in-memory Barbershop
+     * Configures this barbershop so that instances of [documentDataClass] will rendered by
+     * [documentTemplate] for its target locale.
      */
     fun installDocumentTemplate(
       documentDataClass: KClass<out DocumentData>,
@@ -28,23 +28,24 @@ interface Barbershop {
     ): Builder
 
     /**
-     * Consumes a [Document] and persists in-memory
-     * At boot, a service will call [installDocument] on all [Document] to add to the in-memory Barbershop instance
+     * Prepares this barbershop to render instances of [document].
      */
     fun installDocument(document: KClass<out Document>): Builder
 
     /**
-     * Set a [LocaleResolver] to be used when resolving a localized [DocumentTemplate].
-     * Default: [MatchOrFirstLocaleResolver].
+     * Configures this barbershop to use [LocaleResolver] to map requested locales to available
+     * templates. By default Barber does an exact match, and if nothing matches it uses the first
+     * installed template.
      */
     fun setLocaleResolver(resolver: LocaleResolver): Builder
 
     /**
-     * Validates BarbershopBuilder inputs and returns a Barbershop instance with the installed and validated elements
+     * Validates that all templates, document datas, and documents are mutually consistent and
+     * returns a new Barbershop.
      */
     fun build(): Barbershop
   }
 }
 
 inline fun <reified DD : DocumentData, reified D : Document> Barbershop.getBarber() = getBarber(
-    DD::class, D::class)
+  DD::class, D::class)
