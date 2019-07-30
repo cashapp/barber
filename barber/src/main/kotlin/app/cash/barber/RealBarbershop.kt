@@ -6,7 +6,8 @@ import app.cash.barber.models.DocumentData
 import kotlin.reflect.KClass
 
 internal class RealBarbershop(
-  private val barbers: Map<BarberKey, Barber<DocumentData, Document>>
+  private val barbers: Map<BarberKey, Barber<DocumentData, Document>>,
+  private val warnings: List<String>
 ) : Barbershop {
   @Suppress("UNCHECKED_CAST")
   override fun <DD : DocumentData, D : Document> getBarber(
@@ -44,4 +45,6 @@ internal class RealBarbershop(
   }
 
   override fun getAllBarbers(): Map<BarberKey, Barber<DocumentData, Document>> = barbers
+
+  override fun getWarnings(): List<String> = warnings
 }

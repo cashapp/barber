@@ -17,6 +17,8 @@ interface Barbershop {
 
   fun getAllBarbers(): Map<BarberKey, Barber<*, *>>
 
+  fun getWarnings(): List<String>
+
   interface Builder {
     /**
      * Configures this barbershop so that instances of [documentDataClass] will rendered by
@@ -38,6 +40,12 @@ interface Barbershop {
      * installed template.
      */
     fun setLocaleResolver(resolver: LocaleResolver): Builder
+
+    /**
+     * Configures this barbershop to treat warnings as errors during validataion. By default,
+     * only errors, not warnings, lead to fatal BarberException during validation.
+     */
+    fun setWarningsAsErrors(): Builder
 
     /**
      * Validates that all templates, document datas, and documents are mutually consistent and
