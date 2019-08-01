@@ -8,7 +8,7 @@ class BarberExceptionTest {
   @Test
   fun `Pretty toString Formatting`() {
     val exception = assertFailsWith<BarberException> {
-      throw BarberException(problems = listOf("""
+      throw BarberException(errors = listOf("""
         |Alpha is unset
         |Details
         |More Details
@@ -16,14 +16,15 @@ class BarberExceptionTest {
         |Bravo is unset
         |Details
         |More Details
-      """.trimMargin(), """
+      """.trimMargin()),
+        warnings = listOf("""
         |Charlie is unset
         |Details
         |More Details
       """.trimMargin()))
     }
     assertEquals("""
-      |Problems
+      |Errors
       |1) Alpha is unset
       |Details
       |More Details
@@ -32,7 +33,8 @@ class BarberExceptionTest {
       |Details
       |More Details
       |
-      |3) Charlie is unset
+      |Warnings
+      |1) Charlie is unset
       |Details
       |More Details
       |

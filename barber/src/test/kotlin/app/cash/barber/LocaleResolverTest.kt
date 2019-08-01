@@ -85,7 +85,7 @@ class LocaleResolverTest {
     }
     assertEquals(
       """
-        |Problems
+        |Errors
         |1) Resolved entry is not valid key in Map.
         |LocaleResolver: class app.cash.barber.examples.BadMapleSyrupLocaleResolver
         |Locale: [Locale=en-CA]

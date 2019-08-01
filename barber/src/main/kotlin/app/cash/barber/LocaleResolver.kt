@@ -15,10 +15,10 @@ interface LocaleResolver {
   fun <T> resolve(locale: Locale, map: Map<Locale, T?>): T {
     return map[resolve(locale, map.keys)] ?: if (map.isEmpty()) {
       // Usage in Barber prevents the empty case from happening
-      throw BarberException(problems = listOf("Can not resolve entry of an empty Map."))
+      throw BarberException(errors = listOf("Can not resolve entry of an empty Map."))
     } else {
       // LocaleResolver has not respected the contract that they must resolve a valid key in Map
-      throw BarberException(problems = listOf("""
+      throw BarberException(errors = listOf("""
           |Resolved entry is not valid key in Map.
           |LocaleResolver: ${this::class}
           |Locale: $locale

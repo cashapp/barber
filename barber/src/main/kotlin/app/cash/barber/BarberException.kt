@@ -24,16 +24,33 @@ package app.cash.barber
 // TODO make exceptions typed so the above example could be parsed by a client and show rich
 //  feedback for DocumentTemplate writers
 class BarberException(
-  val problems: List<String>
+  val errors: List<String> = listOf(),
+  val warnings: List<String> = listOf()
 ) : IllegalStateException() {
   override fun toString(): String {
-    val sanitizedProblems = problems
-      .map { it.replace("$", "::") }
-      .mapIndexed { index, s -> "${index + 1}) $s\n" }
-      .joinToString("\n")
-    return """
-      |Problems
-      |$sanitizedProblems
-    """.trimMargin()
+    val errorText = if (errors.isNotEmpty()) {
+      """
+      |Errors
+      |${errors.sanitize()}
+      """.trimMargin()
+    } else ""
+    val warningText = if (warnings.isNotEmpty()) {
+      """
+      |Warnings
+      |${warnings.sanitize()}
+      """.trimMargin()
+    } else ""
+
+    return if (errors.isEmpty() && warnings.isEmpty()) {
+      "Unknown BarberException"
+    } else if (errors.isNotEmpty() && warnings.isNotEmpty()) {
+      errorText + "\n" + warningText
+    } else {
+      errorText + warningText
+    }
   }
+
+  private fun List<String>.sanitize(): String = map { it.replace("$", "::") }
+    .mapIndexed { index, s -> "${index + 1}) $s\n" }
+    .joinToString("\n")
 }

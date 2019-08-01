@@ -18,13 +18,15 @@ class BarbershopBuilder : Barbershop.Builder {
   private val installedDocument = mutableSetOf<KClass<out Document>>()
   private val mustacheFactory = DefaultMustacheFactory()
   private var localeResolver: LocaleResolver = MatchOrFirstLocaleResolver
+  private var warningsAsErrors: Boolean = false
+  private val warnings = mutableListOf<String>()
 
   override fun installDocumentTemplate(
     documentDataClass: KClass<out DocumentData>,
     documentTemplate: DocumentTemplate
   ) = apply {
     if (installedDocumentTemplates.contains(documentDataClass, documentTemplate.locale)) {
-      throw BarberException(problems = listOf("""
+      throw BarberException(errors = listOf("""
         |Attempted to install DocumentTemplate that will overwrite an already installed DocumentTemplate with locale
         |${documentTemplate.locale}.
         |Already Installed
@@ -55,6 +57,10 @@ class BarbershopBuilder : Barbershop.Builder {
     localeResolver = resolver
   }
 
+  override fun setWarningsAsErrors(): Barbershop.Builder = apply {
+    warningsAsErrors = true
+  }
+
   override fun build(): Barbershop = installedDocumentTemplates.validate().asBarbershop()
 
   /**
@@ -62,46 +68,51 @@ class BarbershopBuilder : Barbershop.Builder {
    * validated elements.
    */
   private fun Table<KClass<out DocumentData>, Locale, CompiledDocumentTemplate>.validate() = apply {
-    val problems: MutableList<String> = mutableListOf()
+    val errors: MutableList<String> = mutableListOf()
 
-    // Barber elements must be installed
+    // Warn if Barber elements are not installed
     if (cellSet().isEmpty()) {
-      problems.add("""
+      warnings.add("""
         |No DocumentData or DocumentTemplates installed
       """.trimMargin())
     }
     if (installedDocument.isEmpty()) {
-      problems.add("""
+      warnings.add("""
         |No Documents installed
       """.trimMargin())
     }
 
-    if (problems.isNotEmpty()) {
-      throw BarberException(problems)
-    }
-
-    // All installed Documents must be used
-    val usedDocuments = cellSet().map { it.value!!.targets }.reduce { acc, targets ->
-      acc + targets
-    }.toSet()
-    if (!usedDocuments.containsAll(installedDocument)) {
-      val danglingDocuments = installedDocument.filter { document ->
-        !usedDocuments.contains(document)
+    // Warn if Documents are unused in DocumentTemplates
+    if (installedDocument.isNotEmpty() && cellSet().isNotEmpty()) {
+      val usedDocuments = cellSet()
+        .map { it.value!!.targets }
+        .reduce { acc, targets ->
+          acc + targets
+        }.toSet()
+      if (!usedDocuments.containsAll(installedDocument)) {
+        val danglingDocuments = installedDocument.filter { document ->
+          !usedDocuments.contains(document)
+        }
+        warnings.add("""
+          |Document installed that is not used in any installed DocumentTemplates
+          |$danglingDocuments
+          |
+          """.trimMargin())
       }
-      problems.add("""
-      |Document installed that is not used in any installed DocumentTemplates
-      |$danglingDocuments
-      |
-    """.trimMargin())
     }
 
+    // Throwing early makes debugging simpler for Barber developers as the above simple warnings
+    // can be raised before a flood of other errors below fail as a result of the above
+    throwBarberException(errors = errors, warnings = warnings)
+
+    // Standard validation
     cellSet().forEach { cell ->
       val documentDataClass = cell.rowKey!!
       val compiledDocumentTemplate = cell.value!!
 
       // DocumentTemplate must be installed with a DocumentData that is listed in its Source
       if (documentDataClass != compiledDocumentTemplate.source) {
-        problems.add("""
+        errors.add("""
           |Attempted to install DocumentTemplate with a DocumentData not specified in the DocumentTemplate source.
           |DocumentTemplate.source: ${compiledDocumentTemplate.source}
           |DocumentData: $documentDataClass
@@ -113,7 +124,7 @@ class BarbershopBuilder : Barbershop.Builder {
         !installedDocument.contains(it)
       }
       if (notInstalledDocument.isNotEmpty()) {
-        problems.add("""
+        errors.add("""
           |Attempted to install DocumentTemplate without the corresponding Document being installed.
           |Not installed DocumentTemplate.targets:
           |$notInstalledDocument
@@ -127,7 +138,7 @@ class BarbershopBuilder : Barbershop.Builder {
         // Check for missing variables in field templates
         codes.forEach { code ->
           if (!documentDataParameterNames.contains(code.rootKey())) {
-            problems.add(
+            errors.add(
               "Missing variable [$code] in DocumentData [$documentDataClass] for DocumentTemplate field [${compiledDocumentTemplate.fields[name].asString()}]")
           }
         }
@@ -139,7 +150,7 @@ class BarbershopBuilder : Barbershop.Builder {
         // Validate that Document has a Primary Constructor
         val documentConstructor = documentClass.primaryConstructor
         if (documentConstructor == null) {
-          problems.add("No primary constructor for Document class ${documentClass::class}.")
+          errors.add("No primary constructor for Document class ${documentClass::class}.")
           listOf()
         } else {
           documentConstructor.parameters
@@ -159,13 +170,14 @@ class BarbershopBuilder : Barbershop.Builder {
         val missingFields = requiredTargetFields.filter {
           !compiledDocumentTemplate.fields.containsKey(it)
         }
-        val documentsThatRequireMissingField = compiledDocumentTemplate.targets.map { documentClass ->
-          documentClass to documentClass.primaryConstructor!!.parameters.map { it.name }.filter {
-            missingFields.contains(it)
-          }
-        }.toMap().map { "[${it.key}] requires missing fields ${it.value}" }.joinToString("\n")
+        val documentsThatRequireMissingField =
+          compiledDocumentTemplate.targets.map { documentClass ->
+            documentClass to documentClass.primaryConstructor!!.parameters.map { it.name }.filter {
+              missingFields.contains(it)
+            }
+          }.toMap().map { "[${it.key}] requires missing fields ${it.value}" }.joinToString("\n")
 
-        problems.add("""
+        errors.add("""
               |Installed DocumentTemplate missing required fields for Document targets
               |Missing fields:
               |$documentsThatRequireMissingField
@@ -177,7 +189,7 @@ class BarbershopBuilder : Barbershop.Builder {
         val additionalFields = compiledDocumentTemplate.fields.keys.filter { field ->
           !allTargetFields.contains(field)
         }
-        problems.add("""
+        errors.add("""
               |Installed DocumentTemplate has additional fields that are not used in any target Document
               |Additional fields:
               |${additionalFields.joinToString("\n")}
@@ -189,7 +201,7 @@ class BarbershopBuilder : Barbershop.Builder {
         val documentTemplates = row(documentDataClass)
 
         if (documentTemplates.isEmpty()) {
-          problems.add("""
+          errors.add("""
             |Attempting to build Barber<$documentDataClass, $documentClass>.
             |No installed DocumentTemplates for DocumentData key: $documentDataClass.
             |Check usage of BarbershopBuilder to ensure that all DocumentTemplates are installed to prevent dangling DocumentData.
@@ -200,7 +212,7 @@ class BarbershopBuilder : Barbershop.Builder {
         // Confirm that output Document is a valid target for the DocumentTemplate
         documentTemplates.forEach { (_, documentTemplate) ->
           if (!documentTemplate.targets.contains(documentClass)) {
-            problems.add("""
+            errors.add("""
               |Specified target $documentClass not a valid target for DocumentData's corresponding DocumentTemplate.
               |Valid targets:
               |${documentTemplate.targets}
@@ -217,12 +229,12 @@ class BarbershopBuilder : Barbershop.Builder {
 
       val documentDataConstructor = documentDataClass.primaryConstructor
       if (documentDataConstructor == null) {
-        problems.add("Null primary constructor for DocumentData $documentDataClass")
+        errors.add("Null primary constructor for DocumentData $documentDataClass")
       } else {
         val documentDataParameterNames = documentDataConstructor.parameters.map { it.name }.toList()
         documentDataParameterNames.forEach { parameter ->
           if (!codes.map { it.rootKey() }.contains(parameter)) {
-            problems.add("""
+            errors.add("""
                 |Unused DocumentData variable [$parameter] in [$documentDataClass] with no usage in installed DocumentTemplate Locales:
                 |${documentTemplates.keys.joinToString("\n")}
               """.trimMargin())
@@ -231,8 +243,12 @@ class BarbershopBuilder : Barbershop.Builder {
       }
     }
 
-    if (problems.isNotEmpty()) {
-      throw BarberException(problems = problems)
+    throwBarberException(errors = errors, warnings = warnings)
+  }
+  
+  private fun throwBarberException(errors: List<String>, warnings: List<String>) {
+    if (errors.isNotEmpty() || (warnings.isNotEmpty() && warningsAsErrors)) {
+      throw BarberException(errors = errors, warnings = warnings)
     }
   }
 
@@ -249,6 +265,6 @@ class BarbershopBuilder : Barbershop.Builder {
           localeResolver = localeResolver)
       }
     }
-    return RealBarbershop(barbers)
+    return RealBarbershop(barbers = barbers, warnings = warnings)
   }
 }

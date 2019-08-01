@@ -43,38 +43,6 @@ class BarbershopBuilderTest {
   }
 
   @Test
-  fun `Install fails on no DocumentTemplate and DocumentData`() {
-    val exception = assertFailsWith<BarberException> {
-      BarbershopBuilder()
-        .installDocument<TransactionalEmailDocument>()
-        .build()
-    }
-    assertEquals(
-      """
-        |Problems
-        |1) No DocumentData or DocumentTemplates installed
-        |
-      """.trimMargin(),
-      exception.toString())
-  }
-
-  @Test
-  fun `Install fails on no Documents`() {
-    val exception = assertFailsWith<BarberException> {
-      BarbershopBuilder()
-        .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
-        .build()
-    }
-    assertEquals(
-      """
-        |Problems
-        |1) No Documents installed
-        |
-      """.trimMargin(),
-      exception.toString())
-  }
-
-  @Test
   fun `Fails when DocumentTemplate target Documents are not installed`() {
     val exception = assertFailsWith<BarberException> {
       BarbershopBuilder()
@@ -84,7 +52,7 @@ class BarbershopBuilderTest {
         .build()
     }
     assertEquals("""
-      |Problems
+      |Errors
       |1) Attempted to install DocumentTemplate without the corresponding Document being installed.
       |Not installed DocumentTemplate.targets:
       |[class app.cash.barber.examples.TransactionalSmsDocument]
@@ -102,7 +70,7 @@ class BarbershopBuilderTest {
         .build()
     }
     assertEquals("""
-      |Problems
+      |Errors
       |1) Attempted to install DocumentTemplate with a DocumentData not specified in the DocumentTemplate source.
       |DocumentTemplate.source: class app.cash.barber.examples.RecipientReceipt
       |DocumentData: class app.cash.barber.examples.SenderReceipt
@@ -122,10 +90,11 @@ class BarbershopBuilderTest {
         .installDocument<TransactionalEmailDocument>()
         .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
         .installDocument<TransactionalSmsDocument>()
+        .setWarningsAsErrors()
         .build()
     }
     assertEquals("""
-      |Problems
+      |Warnings
       |1) Document installed that is not used in any installed DocumentTemplates
       |[class app.cash.barber.examples.TransactionalEmailDocument]
       |
@@ -156,7 +125,7 @@ class BarbershopBuilderTest {
     }
     assertEquals(
       """
-        |Problems
+        |Errors
         |1) Missing variable [shares] in DocumentData [class app.cash.barber.BarbershopBuilderTest::Fails when variable in field template is not in source DocumentData::TradeReceipt] for DocumentTemplate field [You bought {{ shares }} shares of {{ ticker }}.]
         |
       """.trimMargin(),
@@ -187,7 +156,7 @@ class BarbershopBuilderTest {
     }
     assertEquals(
       """
-        |Problems
+        |Errors
         |1) Unused DocumentData variable [shares] in [class app.cash.barber.BarbershopBuilderTest::Fails when variable in data is not used in any field template::TradeReceipt] with no usage in installed DocumentTemplate Locales:
         |[Locale=en-US]
         |
@@ -214,7 +183,7 @@ class BarbershopBuilderTest {
     }
     assertEquals(
       """
-        |Problems
+        |Errors
         |1) Installed DocumentTemplate missing required fields for Document targets
         |Missing fields:
         |[class app.cash.barber.examples.TransactionalSmsDocument] requires missing fields [sms_body]
@@ -252,7 +221,7 @@ class BarbershopBuilderTest {
     }
     assertEquals(
       """
-        |Problems
+        |Errors
         |1) Installed DocumentTemplate has additional fields that are not used in any target Document
         |Additional fields:
         |extra_field
@@ -289,7 +258,7 @@ class BarbershopBuilderTest {
     }
     assertEquals(
       """
-        |Problems
+        |Errors
         |1) Attempted to install DocumentTemplate that will overwrite an already installed DocumentTemplate with locale
         |[Locale=en-US].
         |Already Installed

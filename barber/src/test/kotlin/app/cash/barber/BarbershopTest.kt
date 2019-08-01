@@ -53,7 +53,7 @@ class BarbershopTest {
     }
     assertEquals(
       """
-        |Problems
+        |Errors
         |1) Failed to get Barber<class app.cash.barber.examples.RecipientReceipt, class app.cash.barber.examples.TransactionalEmailDocument>
         |Requested Document [class app.cash.barber.examples.TransactionalEmailDocument] is installed
         |Requested DocumentData [class app.cash.barber.examples.RecipientReceipt] is installed
@@ -75,7 +75,7 @@ class BarbershopTest {
     }
     assertEquals(
       """
-        |Problems
+        |Errors
         |1) Failed to get Barber<class app.cash.barber.examples.RecipientReceipt, class app.cash.barber.examples.TransactionalEmailDocument>
         |Document [class app.cash.barber.examples.TransactionalEmailDocument] is not installed in Barbershop
         |
