@@ -77,7 +77,8 @@ class BarbershopBuilderTest {
       |
       |2) Missing variable [sender] in DocumentData [class app.cash.barber.examples.SenderReceipt] for DocumentTemplate field [{{sender}} sent you {{amount}}. It will be available at {{ deposit_expected_at }}. Cancel here: {{ cancelUrl }}]
       |
-      |3) Unused DocumentData variable [recipient] in [class app.cash.barber.examples.SenderReceipt] with no usage in installed DocumentTemplate Locales:
+      |Warnings
+      |1) Unused DocumentData variable [recipient] in [class app.cash.barber.examples.SenderReceipt] with no usage in installed DocumentTemplate Locales:
       |[Locale=en-US]
       |
       """.trimMargin(), exception.toString())
@@ -152,11 +153,12 @@ class BarbershopBuilderTest {
       BarbershopBuilder()
         .installDocument<TransactionalSmsDocument>()
         .installDocumentTemplate<TradeReceipt>(tradeReceiptEN_US)
+        .setWarningsAsErrors()
         .build()
     }
     assertEquals(
       """
-        |Errors
+        |Warnings
         |1) Unused DocumentData variable [shares] in [class app.cash.barber.BarbershopBuilderTest::Fails when variable in data is not used in any field template::TradeReceipt] with no usage in installed DocumentTemplate Locales:
         |[Locale=en-US]
         |
