@@ -234,7 +234,7 @@ class BarbershopBuilder : Barbershop.Builder {
         val documentDataParameterNames = documentDataConstructor.parameters.map { it.name }.toList()
         documentDataParameterNames.forEach { parameter ->
           if (!codes.map { it.rootKey() }.contains(parameter)) {
-            errors.add("""
+            warnings.add("""
                 |Unused DocumentData variable [$parameter] in [$documentDataClass] with no usage in installed DocumentTemplate Locales:
                 |${documentTemplates.keys.joinToString("\n")}
               """.trimMargin())
