@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class BarbershopBuilderTest {
+class BarbershopBuilderErrorTest {
   @Test
   fun `Install works`() {
     BarbershopBuilder()
@@ -79,25 +79,6 @@ class BarbershopBuilderTest {
       |
       |3) Unused DocumentData variable [recipient] in [class app.cash.barber.examples.SenderReceipt] with no usage in installed DocumentTemplate Locales:
       |[Locale=en-US]
-      |
-      """.trimMargin(), exception.toString())
-  }
-
-  @Test
-  fun `Fails on unused dangling installed Document`() {
-    val exception = assertFailsWith<BarberException> {
-      BarbershopBuilder()
-        .installDocument<TransactionalEmailDocument>()
-        .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
-        .installDocument<TransactionalSmsDocument>()
-        .setWarningsAsErrors()
-        .build()
-    }
-    assertEquals("""
-      |Warnings
-      |1) Document installed that is not used in any installed DocumentTemplates
-      |[class app.cash.barber.examples.TransactionalEmailDocument]
-      |
       |
       """.trimMargin(), exception.toString())
   }
