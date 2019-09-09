@@ -7,6 +7,7 @@ import app.cash.barber.examples.TransactionalSmsDocument
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_CA
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_GB
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_US
+import app.cash.barber.examples.recipientReceiptSmsEmailDocumentTemplateEN_US
 import app.cash.barber.examples.senderReceiptEmailDocumentTemplateEN_US
 import app.cash.barber.models.BarberKey
 import org.assertj.core.api.Assertions.assertThat
@@ -81,5 +82,39 @@ class BarbershopTest {
         |
       """.trimMargin(),
       exception.toString())
+  }
+
+  @Test
+  fun `getTargetDocuments happy path`() {
+    val barbershop = BarbershopBuilder()
+      .installDocument<TransactionalSmsDocument>()
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
+      .build()
+    val supportedDocuments = barbershop.getTargetDocuments<RecipientReceipt>()
+    assertThat(supportedDocuments).containsOnly(TransactionalSmsDocument::class)
+  }
+
+  @Test
+  fun `getTargetDocuments multiple supported documents`() {
+    val barbershop = BarbershopBuilder()
+      .installDocument<TransactionalSmsDocument>()
+      .installDocument<TransactionalEmailDocument>()
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsEmailDocumentTemplateEN_US)
+      .build()
+    val supportedDocuments = barbershop.getTargetDocuments<RecipientReceipt>()
+    assertThat(supportedDocuments).containsOnly(
+      TransactionalSmsDocument::class,
+      TransactionalEmailDocument::class
+    )
+  }
+
+  @Test
+  fun `getTargetDocuments no supported documents`() {
+    val barbershop = BarbershopBuilder()
+      .installDocument<TransactionalSmsDocument>()
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
+      .build()
+    val supportedDocuments = barbershop.getTargetDocuments<SenderReceipt>()
+    assertThat(supportedDocuments).isEmpty()
   }
 }

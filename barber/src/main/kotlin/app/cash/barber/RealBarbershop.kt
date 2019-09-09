@@ -44,6 +44,13 @@ internal class RealBarbershop(
     return barber as Barber<DD, D>
   }
 
+  override fun <DD : DocumentData> getTargetDocuments(
+    documentDataClass: KClass<out DD>
+  ): Set<KClass<out Document>> = barbers.keys
+    .filter { it.documentData == documentDataClass }
+    .map { it.document }
+    .toSet()
+
   override fun getAllBarbers(): Map<BarberKey, Barber<DocumentData, Document>> = barbers
 
   override fun getWarnings(): List<String> = warnings
