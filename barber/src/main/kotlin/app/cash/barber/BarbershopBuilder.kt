@@ -245,7 +245,7 @@ class BarbershopBuilder : Barbershop.Builder {
 
     throwBarberException(errors = errors, warnings = warnings)
   }
-  
+
   private fun throwBarberException(errors: List<String>, warnings: List<String>) {
     if (errors.isNotEmpty() || (warnings.isNotEmpty() && warningsAsErrors)) {
       throw BarberException(errors = errors, warnings = warnings)
