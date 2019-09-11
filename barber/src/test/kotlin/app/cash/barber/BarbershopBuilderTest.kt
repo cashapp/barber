@@ -1,9 +1,12 @@
 package app.cash.barber
 
+import app.cash.barber.examples.EmptyDocumentData
+import app.cash.barber.examples.NoParametersDocument
 import app.cash.barber.examples.RecipientReceipt
 import app.cash.barber.examples.SenderReceipt
 import app.cash.barber.examples.TransactionalEmailDocument
 import app.cash.barber.examples.TransactionalSmsDocument
+import app.cash.barber.examples.noParametersDocumentTemplate
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_CA
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_GB
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_US
@@ -80,6 +83,21 @@ class BarbershopBuilderTest {
       |Warnings
       |1) Unused DocumentData variable [recipient] in [class app.cash.barber.examples.SenderReceipt] with no usage in installed DocumentTemplate Locales:
       |[Locale=en-US]
+      |
+      """.trimMargin(), exception.toString())
+  }
+
+  @Test
+  fun `Fails when Document has no parameters`() {
+    val exception = assertFailsWith<BarberException> {
+      BarbershopBuilder()
+        .installDocument<NoParametersDocument>()
+        .installDocumentTemplate<EmptyDocumentData>(noParametersDocumentTemplate)
+        .build()
+    }
+    assertEquals("""
+      |Errors
+      |1) No fields included for Document [class app.cash.barber.examples.NoParametersDocument]
       |
       """.trimMargin(), exception.toString())
   }

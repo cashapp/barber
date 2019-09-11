@@ -10,8 +10,12 @@ internal fun Map<String, Mustache?>.asFieldCodesMap() =
     template?.codes?.mapNotNull { it.name }?.toSet() ?: setOf<String>()
   }
 
-internal fun Map<*, Set<String>>.reduceSet() =
-  values.reduce { acc, codes -> acc + codes }
+internal fun Map<*, Set<String>>.reduceSet(): Set<String> =
+  if (values.isNotEmpty()) {
+    values.reduce { acc, codes -> acc + codes }
+  } else {
+    setOf()
+  }
 
 internal fun Map<String, Mustache?>.reducedFieldCodes() =
   asFieldCodesMap().reduceSet()

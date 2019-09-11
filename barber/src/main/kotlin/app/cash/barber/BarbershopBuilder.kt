@@ -150,7 +150,10 @@ class BarbershopBuilder : Barbershop.Builder {
         // Validate that Document has a Primary Constructor
         val documentConstructor = documentClass.primaryConstructor
         if (documentConstructor == null) {
-          errors.add("No primary constructor for Document class ${documentClass::class}.")
+          errors.add("No primary constructor for Document [$documentClass]")
+          listOf()
+        } else if (documentConstructor.parameters.isEmpty()) {
+          errors.add("No fields included for Document [$documentClass]")
           listOf()
         } else {
           documentConstructor.parameters
