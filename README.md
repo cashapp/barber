@@ -200,7 +200,7 @@ val recipientReceiptSmsDocumentTemplateEN_CA = DocumentTemplate(
 
 // Define DocumentTemplate in Spanish
 val recipientReceiptSmsDocumentTemplateES_US = DocumentTemplate(
-  fields = mapOf("sms_body" to "{{sender}} te envio {{amount}}"),
+  fields = mapOf("sms_body" to "{{sender}} te envió {{amount}}"),
   // ... same as EN_US
   locale = Locale.ES_US
 )
