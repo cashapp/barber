@@ -7,7 +7,7 @@ import kotlin.reflect.KFunction
 
 internal fun Map<String, Mustache?>.asFieldCodesMap() =
   mapValues { (_, template: Mustache?) ->
-    template?.codes?.mapNotNull { it.name }?.toSet() ?: setOf<String>()
+    template?.codes?.mapNotNull { it.name }?.toSet() ?: setOf()
   }
 
 internal fun Map<*, Set<String>>.reduceSet(): Set<String> =
