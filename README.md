@@ -29,9 +29,16 @@ To answer the above questions, we built Barber💈.
 
 To get started using Barber, skim below to understand the different elements used to safely render your localized, fillable, themed documents using [Mustache](https://mustache.github.io) templating.
 
-### Gradle/Maven Artifact
+# Releases
 
-Barber is not yet published publicly. API is subject to change.
+Our [change log][changelog] has release history. API is subject to change. 
+
+```kotlin
+implementation("app.cash.barber:barber:0.1.0")
+```
+
+Snapshot builds are [available][snap].
+
 
 ## DocumentData
 
@@ -310,19 +317,6 @@ BarberMoney(Money(50_00), EN_US)
  )
 ```
 
-
-Releases
---------
-
-Our [change log][changelog] has release history.
-
-```kotlin
-implementation("app.cash.barber:barber:0.1.0")
-```
-
-Snapshot builds are [available][snap].
-
-
 License
 --------
 
@@ -340,6 +334,6 @@ License
     See the License for the specific language governing permissions and
     limitations under the License.
 
- [barber]: https://cashapp.github.io/barber/
- [changelog]: http://cashapp.github.io/barber/changelog/
- [snap]: https://oss.sonatype.org/content/repositories/snapshots/
+[barber]: https://cashapp.github.io/barber/
+[changelog]: http://cashapp.github.io/barber/changelog/
+[snap]: https://oss.sonatype.org/content/repositories/snapshots/
