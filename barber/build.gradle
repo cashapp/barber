@@ -10,7 +10,8 @@ dependencies {
   implementation dep.guava
   implementation dep.kotlinStdLib
   implementation dep.kotlinReflection
-  implementation dep.moshi
+  implementation dep.moshiCore
+  implementation dep.moshiKotlin
   implementation dep.okio
   implementation dep.mustacheCompiler
 
