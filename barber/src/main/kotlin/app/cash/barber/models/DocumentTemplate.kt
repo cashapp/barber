@@ -1,10 +1,11 @@
 package app.cash.barber.models
 
+import app.cash.barber.BarberMustacheFactoryProvider
 import app.cash.barber.asParameterNames
 import com.github.mustachejava.Mustache
-import com.github.mustachejava.MustacheFactory
 import java.io.StringReader
 import kotlin.reflect.KClass
+import kotlin.reflect.KParameter
 import kotlin.reflect.full.primaryConstructor
 
 /**
@@ -35,12 +36,18 @@ data class DocumentTemplate(
     |)
   """.trimMargin()
 
-  fun compile(mustacheFactory: MustacheFactory): CompiledDocumentTemplate {
+  fun compile(
+    mustacheFactoryProvider: BarberMustacheFactoryProvider,
+    installedFieldKeyDocumentKParameterMap: Map<String, Pair<KClass<out Document>, KParameter>>
+  ): CompiledDocumentTemplate {
     // Pre-compile Mustache templates
-    val documentDataFields: MutableMap<String, Mustache?> =
-        fields.mapValues {
-          mustacheFactory.compile(StringReader(it.value), it.value)
-        }.toMutableMap()
+    val documentTemplateFields: MutableMap<String, Mustache?> =
+      fields.mapValues { (fieldKey, fieldValue) ->
+        // Render using a MustacheFactory that will respect any field BarberFieldEncoding annotations
+        val documentFieldAnnotations = installedFieldKeyDocumentKParameterMap[fieldKey]?.second?.annotations
+        val barberField = documentFieldAnnotations?.find { it is BarberField } as BarberField?
+        mustacheFactoryProvider.get(barberField?.encoding).compile(StringReader(fieldValue), fieldValue)
+      }.toMutableMap()
 
     // Find missing fields in DocumentTemplate
     // Missing fields occur when a nullable field in Document is not an included key in the DocumentTemplate fields
@@ -59,12 +66,13 @@ data class DocumentTemplate(
     }.toSet()
 
     // Initialize keys for missing nullable fields in DocumentTemplate
-    combinedDocumentParameterNames.mapNotNull { documentDataFields.putIfAbsent(it, null) }
+    combinedDocumentParameterNames.mapNotNull { documentTemplateFields.putIfAbsent(it, null) }
 
     return CompiledDocumentTemplate(
-        fields = documentDataFields,
+        fields = documentTemplateFields,
         source = source,
         targets = targets,
-        locale = locale)
+        locale = locale
+    )
   }
 }

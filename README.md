@@ -181,6 +181,37 @@ val sandy50Receipt = RecipientReceipt(
 val renderedSms = recipientReceiptSms.render(sandy50Receipt, EN_US)
 ```
 
+## @BarberField, BarberFieldEncoding, and HTML Character Escaping
+
+The `@BarberField` annotation can be used on Document class `val` fields to declare that the field should be rendered and treated according to a specific `BarberFieldEncoding`.
+
+`BarberFieldEncoding` can be for now `STRING_HTML` or `STRING_PLAINTEXT`. 
+
+By default, all fields are treated as `STRING_HTML` and have common HTML escaping of characters for safety. 
+
+When a field is annotated as `STRING_PLAINTEXT`, characters will not be escaped.
+
+```kotlin
+data class EncodingTestDocument(
+  val no_annotation_field: String,
+  @BarberField()
+  val default_field: String,
+  @BarberField(encoding = BarberFieldEncoding.STRING_HTML)
+  val html_field: String,
+  @BarberField(encoding = BarberFieldEncoding.STRING_PLAINTEXT)
+  val plaintext_field: String
+) : Document
+
+// Rendered with all fields set to `You purchased 100 shares of McDonald's.`
+EncodingTestDocument(
+    no_annotation_field = "You purchased 100 shares of McDonald&#39;s.",
+    default_field = "You purchased 100 shares of McDonald&#39;s.",
+    html_field = "You purchased 100 shares of McDonald&#39;s.",
+    // Note: no character escaping on the plaintext field
+    plaintext_field = "You purchased 100 shares of McDonald's."
+)
+```
+
 ## Locale
 
 Barber supports installation and resolution of multiple Locales for each `DocumentTemplate`.
