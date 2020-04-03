@@ -16,7 +16,7 @@ class BarbershopBuilder : Barbershop.Builder {
   private val installedDocumentTemplates =
     HashBasedTable.create<KClass<out DocumentData>, Locale, CompiledDocumentTemplate>()
   private val installedDocument = mutableSetOf<KClass<out Document>>()
-  private val mustacheFactory = DefaultMustacheFactory()
+  private val mustacheFactoryProvider = BarberMustacheFactoryProvider
   private var localeResolver: LocaleResolver = MatchOrFirstLocaleResolver
   private var warningsAsErrors: Boolean = false
   private val warnings = mutableListOf<String>()
@@ -41,7 +41,7 @@ class BarbershopBuilder : Barbershop.Builder {
         """.trimMargin()))
     }
     installedDocumentTemplates.put(documentDataClass, documentTemplate.locale,
-      documentTemplate.compile(mustacheFactory))
+      documentTemplate.compile(mustacheFactoryProvider.get()))
   }
 
   inline fun <reified DD : DocumentData> installDocumentTemplate(documentTemplate: DocumentTemplate) = installDocumentTemplate(
