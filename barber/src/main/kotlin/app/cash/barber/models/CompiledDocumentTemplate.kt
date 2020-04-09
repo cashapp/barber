@@ -19,9 +19,9 @@ data class CompiledDocumentTemplate(
   override fun toString(): String = toDocumentTemplate().toString()
 
   fun toDocumentTemplate() = DocumentTemplate(
-    fields = this.fields.mapValues { it.value.asString() },
-    source = this.source,
-    targets = this.targets,
-    locale = this.locale
+      fields = this.fields.mapValues { it.value.asString() },
+      source = this.source,
+      targets = this.targets,
+      locale = this.locale
   )
 }

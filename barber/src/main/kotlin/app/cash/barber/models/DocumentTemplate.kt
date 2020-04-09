@@ -38,9 +38,9 @@ data class DocumentTemplate(
   fun compile(mustacheFactory: MustacheFactory): CompiledDocumentTemplate {
     // Pre-compile Mustache templates
     val documentDataFields: MutableMap<String, Mustache?> =
-      fields.mapValues {
-        mustacheFactory.compile(StringReader(it.value), it.value)
-      }.toMutableMap()
+        fields.mapValues {
+          mustacheFactory.compile(StringReader(it.value), it.value)
+        }.toMutableMap()
 
     // Find missing fields in DocumentTemplate
     // Missing fields occur when a nullable field in Document is not an included key in the DocumentTemplate fields
@@ -62,9 +62,9 @@ data class DocumentTemplate(
     combinedDocumentParameterNames.mapNotNull { documentDataFields.putIfAbsent(it, null) }
 
     return CompiledDocumentTemplate(
-      fields = documentDataFields,
-      source = source,
-      targets = targets,
-      locale = locale)
+        fields = documentDataFields,
+        source = source,
+        targets = targets,
+        locale = locale)
   }
 }

@@ -16,7 +16,7 @@ interface Barbershop {
   ): Barber<DD, D>
 
   fun <DD : DocumentData> getTargetDocuments(documentDataClass: KClass<out DD>):
-    Set<KClass<out Document>>
+      Set<KClass<out Document>>
 
   fun getAllBarbers(): Map<BarberKey, Barber<*, *>>
 
@@ -59,7 +59,7 @@ interface Barbershop {
 }
 
 inline fun <reified DD : DocumentData, reified D : Document> Barbershop.getBarber() = getBarber(
-  DD::class, D::class)
+    DD::class, D::class)
 
 inline fun <reified DD : DocumentData> Barbershop.getTargetDocuments() = getTargetDocuments(
-  DD::class)
+    DD::class)

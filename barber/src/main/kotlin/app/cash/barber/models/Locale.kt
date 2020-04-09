@@ -12,6 +12,7 @@ package app.cash.barber.models
  */
 data class Locale(val locale: String) {
   override fun toString(): String = "[Locale=$locale]"
+
   companion object {
     val EN_CA = Locale("en-CA")
     val EN_GB = Locale("en-GB")

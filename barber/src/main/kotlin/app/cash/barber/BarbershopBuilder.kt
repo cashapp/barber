@@ -14,7 +14,7 @@ import kotlin.reflect.full.primaryConstructor
 
 class BarbershopBuilder : Barbershop.Builder {
   private val installedDocumentTemplates =
-    HashBasedTable.create<KClass<out DocumentData>, Locale, CompiledDocumentTemplate>()
+      HashBasedTable.create<KClass<out DocumentData>, Locale, CompiledDocumentTemplate>()
   private val installedDocument = mutableSetOf<KClass<out Document>>()
   private val mustacheFactory = DefaultMustacheFactory()
   private var localeResolver: LocaleResolver = MatchOrFirstLocaleResolver
@@ -41,11 +41,11 @@ class BarbershopBuilder : Barbershop.Builder {
         """.trimMargin()))
     }
     installedDocumentTemplates.put(documentDataClass, documentTemplate.locale,
-      documentTemplate.compile(mustacheFactory))
+        documentTemplate.compile(mustacheFactory))
   }
 
   inline fun <reified DD : DocumentData> installDocumentTemplate(documentTemplate: DocumentTemplate) = installDocumentTemplate(
-    DD::class, documentTemplate)
+      DD::class, documentTemplate)
 
   override fun installDocument(document: KClass<out Document>) = apply {
     installedDocument.add(document)
@@ -85,10 +85,10 @@ class BarbershopBuilder : Barbershop.Builder {
     // Warn if Documents are unused in DocumentTemplates
     if (installedDocument.isNotEmpty() && cellSet().isNotEmpty()) {
       val usedDocuments = cellSet()
-        .map { it.value!!.targets }
-        .reduce { acc, targets ->
-          acc + targets
-        }.toSet()
+          .map { it.value!!.targets }
+          .reduce { acc, targets ->
+            acc + targets
+          }.toSet()
       if (!usedDocuments.containsAll(installedDocument)) {
         val danglingDocuments = installedDocument.filter { document ->
           !usedDocuments.contains(document)
@@ -139,7 +139,7 @@ class BarbershopBuilder : Barbershop.Builder {
         codes.forEach { code ->
           if (!documentDataParameterNames.contains(code.rootKey())) {
             errors.add(
-              "Missing variable [$code] in DocumentData [$documentDataClass] for DocumentTemplate field [${compiledDocumentTemplate.fields[name].asString()}]")
+                "Missing variable [$code] in DocumentData [$documentDataClass] for DocumentTemplate field [${compiledDocumentTemplate.fields[name].asString()}]")
           }
         }
       }
@@ -174,11 +174,12 @@ class BarbershopBuilder : Barbershop.Builder {
           !compiledDocumentTemplate.fields.containsKey(it)
         }
         val documentsThatRequireMissingField =
-          compiledDocumentTemplate.targets.map { documentClass ->
-            documentClass to documentClass.primaryConstructor!!.parameters.map { it.name }.filter {
-              missingFields.contains(it)
-            }
-          }.toMap().map { "[${it.key}] requires missing fields ${it.value}" }.joinToString("\n")
+            compiledDocumentTemplate.targets.map { documentClass ->
+              documentClass to documentClass.primaryConstructor!!.parameters.map { it.name }
+                  .filter {
+                    missingFields.contains(it)
+                  }
+            }.toMap().map { "[${it.key}] requires missing fields ${it.value}" }.joinToString("\n")
 
         errors.add("""
               |Installed DocumentTemplate missing required fields for Document targets
@@ -263,9 +264,9 @@ class BarbershopBuilder : Barbershop.Builder {
       documentTemplate.targets.forEach { documentClass ->
         val documentTemplatesBySource = row(documentTemplate.source)
         barbers[BarberKey(documentDataClass, documentClass)] = RealBarber(
-          documentConstructor = documentClass.primaryConstructor!!,
-          compiledDocumentTemplateLocales = documentTemplatesBySource.mapValues { it.value },
-          localeResolver = localeResolver)
+            documentConstructor = documentClass.primaryConstructor!!,
+            compiledDocumentTemplateLocales = documentTemplatesBySource.mapValues { it.value },
+            localeResolver = localeResolver)
       }
     }
     return RealBarbershop(barbers = barbers, warnings = warnings)
