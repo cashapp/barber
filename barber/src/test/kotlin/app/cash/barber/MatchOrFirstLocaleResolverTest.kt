@@ -5,10 +5,10 @@ import app.cash.barber.models.Locale.Companion.EN_CA
 import app.cash.barber.models.Locale.Companion.EN_GB
 import app.cash.barber.models.Locale.Companion.EN_US
 import app.cash.barber.models.Locale.Companion.ES_US
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 class MatchOrFirstLocaleResolverTest {
   private lateinit var localeResolver: LocaleResolver
