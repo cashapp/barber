@@ -11,8 +11,8 @@ data class RecipientReceipt(
 ) : DocumentData
 
 val sandy50Receipt = RecipientReceipt(
-  sender = "Sandy Winchester",
-  amount = "$50",
-  cancelUrl = "https://cash.app/cancel/123",
-  deposit_expected_at = Instant.parse("2019-05-21T16:02:00.00Z")
+    sender = "Sandy Winchester",
+    amount = "$50",
+    cancelUrl = "https://cash.app/cancel/123",
+    deposit_expected_at = Instant.parse("2019-05-21T16:02:00.00Z")
 )

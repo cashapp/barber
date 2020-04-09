@@ -10,8 +10,8 @@ class NoParametersDocument : Document
 class EmptyDocumentData : DocumentData
 
 val noParametersDocumentTemplate = DocumentTemplate(
-  fields = mapOf(),
-  source = EmptyDocumentData::class,
-  targets = setOf(NoParametersDocument::class),
-  locale = Locale.EN_US
+    fields = mapOf(),
+    source = EmptyDocumentData::class,
+    targets = setOf(NoParametersDocument::class),
+    locale = Locale.EN_US
 )
