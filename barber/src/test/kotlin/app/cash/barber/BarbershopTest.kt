@@ -10,10 +10,10 @@ import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_US
 import app.cash.barber.examples.recipientReceiptSmsEmailDocumentTemplateEN_US
 import app.cash.barber.examples.senderReceiptEmailDocumentTemplateEN_US
 import app.cash.barber.models.BarberKey
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 
 class BarbershopTest {
   @Test
