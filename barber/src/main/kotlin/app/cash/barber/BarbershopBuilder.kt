@@ -6,16 +6,22 @@ import app.cash.barber.models.Document
 import app.cash.barber.models.DocumentData
 import app.cash.barber.models.DocumentTemplate
 import app.cash.barber.models.Locale
-import com.github.mustachejava.DefaultMustacheFactory
 import com.google.common.collect.HashBasedTable
 import com.google.common.collect.Table
 import kotlin.reflect.KClass
+import kotlin.reflect.KParameter
 import kotlin.reflect.full.primaryConstructor
 
 class BarbershopBuilder : Barbershop.Builder {
+  @Deprecated(
+      "We don't want to compile on install so we can compile with a MustacheFactory according to document output field encoding")
+  private val installedCompiledDocumentTemplates =
+      HashBasedTable.create<KClass<out DocumentData>, Locale, CompiledDocumentTemplate>()
   private val installedDocumentTemplates =
-    HashBasedTable.create<KClass<out DocumentData>, Locale, CompiledDocumentTemplate>()
-  private val installedDocument = mutableSetOf<KClass<out Document>>()
+      HashBasedTable.create<KClass<out DocumentData>, Locale, DocumentTemplate>()
+  private val installedDocuments = mutableSetOf<KClass<out Document>>()
+  private val installedFieldKeyDocumentKParameterMap =
+      mutableMapOf<String, Pair<KClass<out Document>, KParameter>>()
   private val mustacheFactoryProvider = BarberMustacheFactoryProvider
   private var localeResolver: LocaleResolver = MatchOrFirstLocaleResolver
   private var warningsAsErrors: Boolean = false
@@ -41,14 +47,30 @@ class BarbershopBuilder : Barbershop.Builder {
         """.trimMargin()))
     }
     installedDocumentTemplates.put(documentDataClass, documentTemplate.locale,
-      documentTemplate.compile(mustacheFactoryProvider.get()))
+        documentTemplate)
   }
 
   inline fun <reified DD : DocumentData> installDocumentTemplate(documentTemplate: DocumentTemplate) = installDocumentTemplate(
-    DD::class, documentTemplate)
+      DD::class, documentTemplate)
 
   override fun installDocument(document: KClass<out Document>) = apply {
-    installedDocument.add(document)
+    installedDocuments.add(document)
+    val documentParametersByFieldKey = document.primaryConstructor!!.asParameterNames()
+    documentParametersByFieldKey.forEach { (fieldKey, kParameter) ->
+      if (installedFieldKeyDocumentKParameterMap.containsKey(fieldKey)) {
+        throw BarberException(errors = listOf("""
+          |Attempted to install Document that shadows an already installed Document's fields.
+          |Already Installed
+          |Document: ${installedFieldKeyDocumentKParameterMap[fieldKey]!!.first}
+          |Field: $fieldKey
+          |
+          |Attempted to Install
+          |Document: $document
+          |Overlapping Field: $fieldKey
+        """.trimMargin()))
+      }
+      fieldKey?.let { installedFieldKeyDocumentKParameterMap[fieldKey] = Pair(document, kParameter) }
+    }
   }
 
   inline fun <reified D : Document> installDocument() = installDocument(D::class)
@@ -67,7 +89,7 @@ class BarbershopBuilder : Barbershop.Builder {
    * Validates BarbershopBuilder inputs and returns a Barbershop instance with the installed and
    * validated elements.
    */
-  private fun Table<KClass<out DocumentData>, Locale, CompiledDocumentTemplate>.validate() = apply {
+  private fun Table<KClass<out DocumentData>, Locale, DocumentTemplate>.validate(): Table<KClass<out DocumentData>, Locale, CompiledDocumentTemplate> {
     val errors: MutableList<String> = mutableListOf()
 
     // Warn if Barber elements are not installed
@@ -76,21 +98,21 @@ class BarbershopBuilder : Barbershop.Builder {
         |No DocumentData or DocumentTemplates installed
       """.trimMargin())
     }
-    if (installedDocument.isEmpty()) {
+    if (installedDocuments.isEmpty()) {
       warnings.add("""
         |No Documents installed
       """.trimMargin())
     }
 
     // Warn if Documents are unused in DocumentTemplates
-    if (installedDocument.isNotEmpty() && cellSet().isNotEmpty()) {
+    if (installedDocuments.isNotEmpty() && cellSet().isNotEmpty()) {
       val usedDocuments = cellSet()
-        .map { it.value!!.targets }
-        .reduce { acc, targets ->
-          acc + targets
-        }.toSet()
-      if (!usedDocuments.containsAll(installedDocument)) {
-        val danglingDocuments = installedDocument.filter { document ->
+          .map { it.value!!.targets }
+          .reduce { acc, targets ->
+            acc + targets
+          }.toSet()
+      if (!usedDocuments.containsAll(installedDocuments)) {
+        val danglingDocuments = installedDocuments.filter { document ->
           !usedDocuments.contains(document)
         }
         warnings.add("""
@@ -108,20 +130,20 @@ class BarbershopBuilder : Barbershop.Builder {
     // Standard validation
     cellSet().forEach { cell ->
       val documentDataClass = cell.rowKey!!
-      val compiledDocumentTemplate = cell.value!!
+      val documentTemplate = cell.value!!
 
       // DocumentTemplate must be installed with a DocumentData that is listed in its Source
-      if (documentDataClass != compiledDocumentTemplate.source) {
+      if (documentDataClass != documentTemplate.source) {
         errors.add("""
           |Attempted to install DocumentTemplate with a DocumentData not specified in the DocumentTemplate source.
-          |DocumentTemplate.source: ${compiledDocumentTemplate.source}
+          |DocumentTemplate.source: ${documentTemplate.source}
           |DocumentData: $documentDataClass
           """.trimMargin())
       }
 
       // Documents listed in DocumentTemplate.Targets must be installed
-      val notInstalledDocument = compiledDocumentTemplate.targets.filter {
-        !installedDocument.contains(it)
+      val notInstalledDocument = documentTemplate.targets.filter {
+        !installedDocuments.contains(it)
       }
       if (notInstalledDocument.isNotEmpty()) {
         errors.add("""
@@ -131,6 +153,15 @@ class BarbershopBuilder : Barbershop.Builder {
           """.trimMargin())
       }
 
+      // Compile templates according to the MustacheFactory matching to the Document field encoding
+      val compiledDocumentTemplate =
+          documentTemplate.compile(mustacheFactoryProvider, installedFieldKeyDocumentKParameterMap)
+      installedCompiledDocumentTemplates.put(
+          documentDataClass,
+          documentTemplate.locale,
+          compiledDocumentTemplate
+      )
+
       // DocumentTemplates must only use variables from source DocumentData in their fields
       val documentDataConstructor = documentDataClass.primaryConstructor!!
       val documentDataParameterNames = documentDataConstructor.asParameterNames()
@@ -139,14 +170,14 @@ class BarbershopBuilder : Barbershop.Builder {
         codes.forEach { code ->
           if (!documentDataParameterNames.contains(code.rootKey())) {
             errors.add(
-              "Missing variable [$code] in DocumentData [$documentDataClass] for DocumentTemplate field [${compiledDocumentTemplate.fields[name].asString()}]")
+                "Missing variable [$code] in DocumentData [$documentDataClass] for DocumentTemplate field [${documentTemplate.fields[name]}]")
           }
         }
       }
 
       // Document targets must have primaryConstructor
       // and installedDocumentTemplates must be able to fulfill Document target parameter requirements
-      val allTargetParameters = compiledDocumentTemplate.targets.map { documentClass ->
+      val allTargetParameters = documentTemplate.targets.map { documentClass ->
         // Validate that Document has a Primary Constructor
         val documentConstructor = documentClass.primaryConstructor
         if (documentConstructor == null) {
@@ -169,27 +200,28 @@ class BarbershopBuilder : Barbershop.Builder {
       }.map { it.name }
 
       // Confirm that required field keys are present in installedDocumentTemplates
-      if (!compiledDocumentTemplate.fields.keys.containsAll(requiredTargetFields)) {
+      if (!documentTemplate.fields.keys.containsAll(requiredTargetFields)) {
         val missingFields = requiredTargetFields.filter {
-          !compiledDocumentTemplate.fields.containsKey(it)
+          !documentTemplate.fields.containsKey(it)
         }
         val documentsThatRequireMissingField =
-          compiledDocumentTemplate.targets.map { documentClass ->
-            documentClass to documentClass.primaryConstructor!!.parameters.map { it.name }.filter {
-              missingFields.contains(it)
-            }
-          }.toMap().map { "[${it.key}] requires missing fields ${it.value}" }.joinToString("\n")
+            documentTemplate.targets.map { documentClass ->
+              documentClass to documentClass.primaryConstructor!!.parameters.map { it.name }
+                  .filter {
+                    missingFields.contains(it)
+                  }
+            }.toMap().map { "[${it.key}] requires missing fields ${it.value}" }.joinToString("\n")
 
         errors.add("""
               |Installed DocumentTemplate missing required fields for Document targets
               |Missing fields:
               |$documentsThatRequireMissingField
               |
-              |DocumentTemplate: ${compiledDocumentTemplate.toDocumentTemplate()}
+              |DocumentTemplate: $documentTemplate
               """.trimMargin())
       }
-      if (compiledDocumentTemplate.fields.keys.size > allTargetFields.size) {
-        val additionalFields = compiledDocumentTemplate.fields.keys.filter { field ->
+      if (documentTemplate.fields.keys.size > allTargetFields.size) {
+        val additionalFields = documentTemplate.fields.keys.filter { field ->
           !allTargetFields.contains(field)
         }
         errors.add("""
@@ -199,7 +231,7 @@ class BarbershopBuilder : Barbershop.Builder {
             """.trimMargin())
       }
 
-      compiledDocumentTemplate.targets.forEach { documentClass ->
+      documentTemplate.targets.forEach { documentClass ->
         // Lookup installed DocumentTemplates that corresponds to DocumentData
         val documentTemplates = row(documentDataClass)
 
@@ -227,7 +259,7 @@ class BarbershopBuilder : Barbershop.Builder {
     }
 
     // Check for unused DocumentData variable not used in any installed DocumentTemplate field
-    rowMap().forEach { (documentDataClass, documentTemplates) ->
+    installedCompiledDocumentTemplates.rowMap().forEach { (documentDataClass, documentTemplates) ->
       val codes = documentTemplates.reducedFieldCodeSet()
 
       val documentDataConstructor = documentDataClass.primaryConstructor
@@ -247,6 +279,8 @@ class BarbershopBuilder : Barbershop.Builder {
     }
 
     throwBarberException(errors = errors, warnings = warnings)
+
+    return installedCompiledDocumentTemplates
   }
 
   private fun throwBarberException(errors: List<String>, warnings: List<String>) {
@@ -263,9 +297,9 @@ class BarbershopBuilder : Barbershop.Builder {
       documentTemplate.targets.forEach { documentClass ->
         val documentTemplatesBySource = row(documentTemplate.source)
         barbers[BarberKey(documentDataClass, documentClass)] = RealBarber(
-          documentConstructor = documentClass.primaryConstructor!!,
-          compiledDocumentTemplateLocales = documentTemplatesBySource.mapValues { it.value },
-          localeResolver = localeResolver)
+            documentConstructor = documentClass.primaryConstructor!!,
+            compiledDocumentTemplateLocales = documentTemplatesBySource.mapValues { it.value },
+            localeResolver = localeResolver)
       }
     }
     return RealBarbershop(barbers = barbers, warnings = warnings)

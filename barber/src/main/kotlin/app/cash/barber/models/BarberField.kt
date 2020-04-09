@@ -9,11 +9,3 @@ import com.github.mustachejava.util.HtmlEscaper
  *   trusted, free from any invalid characters or potential injection attacks, and targets non-HTML.
  */
 annotation class BarberField(val encoding: BarberFieldEncoding = BarberFieldEncoding.STRING_HTML)
-
-/**
- * Allow clients to declare on DocumentData or Document fields a specific encoding that the value
- *   is to be rendered and handled as. By default, fields are treated as [STRING_HTML].
- */
-enum class BarberFieldEncoding {
-  STRING_HTML, STRING_PLAINTEXT
-}

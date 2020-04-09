@@ -15,18 +15,10 @@ dependencies {
   implementation dep.okio
   implementation dep.mustacheCompiler
 
+  testImplementation dep.junitApi
   testImplementation dep.assertj
   testImplementation dep.kotlinTest
   testImplementation dep.junitEngine
-}
-
-compileJava {
-  sourceCompatibility = 1.8
-  targetCompatibility = 1.8
-}
-
-jar {
-  baseName = "client"
 }
 
 afterEvaluate { project ->

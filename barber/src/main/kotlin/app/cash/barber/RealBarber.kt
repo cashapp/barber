@@ -19,16 +19,16 @@ internal class RealBarber<C : DocumentData, D : Document>(
 
     // Render each field of DocumentTemplate with passed in DocumentData context
     // Some of these fields now will be null since any missing fields will have been added with null values
-    val renderedDocumentDataFields: Map<String, String?> = documentTemplateFields.mapValues {
+    val renderedDocumentTemplateFields: Map<String, String?> = documentTemplateFields.mapValues {
       it.value.renderMustache(documentData)
     }
 
     // Zips the KParameters with corresponding rendered values from DocumentTemplate
-    val documentParametersByName = documentConstructor.asParameterNames()
-    val parameters = renderedDocumentDataFields.filter {
-      documentParametersByName.containsKey(it.key)
+    val documentParametersByFieldKey = documentConstructor.asParameterNames()
+    val parameters = renderedDocumentTemplateFields.filter {
+      documentParametersByFieldKey.containsKey(it.key)
     }.mapKeys {
-      documentParametersByName.getValue(it.key)
+      documentParametersByFieldKey.getValue(it.key)
     }
 
     // Build the Document instance with the rendered DocumentTemplate parameters

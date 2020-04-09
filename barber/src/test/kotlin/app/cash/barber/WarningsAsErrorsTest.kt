@@ -3,9 +3,9 @@ package app.cash.barber
 import app.cash.barber.examples.RecipientReceipt
 import app.cash.barber.examples.TransactionalEmailDocument
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_US
-import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import org.junit.jupiter.api.Test
 
 class WarningsAsErrorsTest {
   @Test

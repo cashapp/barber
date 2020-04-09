@@ -1,10 +1,11 @@
 package app.cash.barber.models
 
+import app.cash.barber.BarberMustacheFactoryProvider
 import app.cash.barber.asParameterNames
 import com.github.mustachejava.Mustache
-import com.github.mustachejava.MustacheFactory
 import java.io.StringReader
 import kotlin.reflect.KClass
+import kotlin.reflect.KParameter
 import kotlin.reflect.full.primaryConstructor
 
 /**
@@ -35,11 +36,17 @@ data class DocumentTemplate(
     |)
   """.trimMargin()
 
-  fun compile(mustacheFactory: MustacheFactory): CompiledDocumentTemplate {
+  fun compile(
+    mustacheFactoryProvider: BarberMustacheFactoryProvider,
+    installedFieldKeyDocumentKParameterMap: Map<String, Pair<KClass<out Document>, KParameter>>
+  ): CompiledDocumentTemplate {
     // Pre-compile Mustache templates
     val documentTemplateFields: MutableMap<String, Mustache?> =
-      fields.mapValues {
-        mustacheFactory.compile(StringReader(it.value), it.value)
+      fields.mapValues { (fieldKey, fieldValue) ->
+        val documentFieldAnnotations = installedFieldKeyDocumentKParameterMap[fieldKey]?.second?.annotations
+        val barberField = documentFieldAnnotations?.find { it is BarberField } as BarberField?
+        val encoding = barberField?.encoding ?: BarberFieldEncoding.STRING_HTML
+        mustacheFactoryProvider.get(encoding).compile(StringReader(fieldValue), fieldValue)
       }.toMutableMap()
 
     // Find missing fields in DocumentTemplate

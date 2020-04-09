@@ -39,6 +39,7 @@ internal class RealBarbershop(
           |DocumentData [$documentDataClass] and corresponding DocumentTemplate(s) are not installed in Barbershop
         """.trimMargin())
       }
+      // TODO(adrw) add a default problem here so we don't emit a null BarberException
       throw BarberException(problems)
     }
     return barber as Barber<DD, D>
