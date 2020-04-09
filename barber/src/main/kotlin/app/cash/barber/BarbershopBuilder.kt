@@ -13,9 +13,9 @@ import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
 
 class BarbershopBuilder : Barbershop.Builder {
-  private val installedDocumentTemplates =
+  private val installedCompiledDocumentTemplates =
       HashBasedTable.create<KClass<out DocumentData>, Locale, CompiledDocumentTemplate>()
-  private val installedDocument = mutableSetOf<KClass<out Document>>()
+  private val installedDocuments = mutableSetOf<KClass<out Document>>()
   private val mustacheFactory = DefaultMustacheFactory()
   private var localeResolver: LocaleResolver = MatchOrFirstLocaleResolver
   private var warningsAsErrors: Boolean = false
@@ -25,22 +25,22 @@ class BarbershopBuilder : Barbershop.Builder {
     documentDataClass: KClass<out DocumentData>,
     documentTemplate: DocumentTemplate
   ) = apply {
-    if (installedDocumentTemplates.contains(documentDataClass, documentTemplate.locale)) {
+    if (installedCompiledDocumentTemplates.contains(documentDataClass, documentTemplate.locale)) {
       throw BarberException(errors = listOf("""
         |Attempted to install DocumentTemplate that will overwrite an already installed DocumentTemplate with locale
         |${documentTemplate.locale}.
         |Already Installed
         |DocumentData: $documentDataClass
         |Locales:
-        |${installedDocumentTemplates.row(documentDataClass).keys.joinToString("\n")}
+        |${installedCompiledDocumentTemplates.row(documentDataClass).keys.joinToString("\n")}
         |DocumentTemplates: [
-        |${installedDocumentTemplates.row(documentDataClass).values.joinToString("\n")}]
+        |${installedCompiledDocumentTemplates.row(documentDataClass).values.joinToString("\n")}]
         |
         |Attempted to Install
         |$documentTemplate
         """.trimMargin()))
     }
-    installedDocumentTemplates.put(documentDataClass, documentTemplate.locale,
+    installedCompiledDocumentTemplates.put(documentDataClass, documentTemplate.locale,
         documentTemplate.compile(mustacheFactory))
   }
 
@@ -48,7 +48,7 @@ class BarbershopBuilder : Barbershop.Builder {
       DD::class, documentTemplate)
 
   override fun installDocument(document: KClass<out Document>) = apply {
-    installedDocument.add(document)
+    installedDocuments.add(document)
   }
 
   inline fun <reified D : Document> installDocument() = installDocument(D::class)
@@ -61,7 +61,7 @@ class BarbershopBuilder : Barbershop.Builder {
     warningsAsErrors = true
   }
 
-  override fun build(): Barbershop = installedDocumentTemplates.validate().asBarbershop()
+  override fun build(): Barbershop = installedCompiledDocumentTemplates.validate().asBarbershop()
 
   /**
    * Validates BarbershopBuilder inputs and returns a Barbershop instance with the installed and
@@ -76,21 +76,21 @@ class BarbershopBuilder : Barbershop.Builder {
         |No DocumentData or DocumentTemplates installed
       """.trimMargin())
     }
-    if (installedDocument.isEmpty()) {
+    if (installedDocuments.isEmpty()) {
       warnings.add("""
         |No Documents installed
       """.trimMargin())
     }
 
     // Warn if Documents are unused in DocumentTemplates
-    if (installedDocument.isNotEmpty() && cellSet().isNotEmpty()) {
+    if (installedDocuments.isNotEmpty() && cellSet().isNotEmpty()) {
       val usedDocuments = cellSet()
           .map { it.value!!.targets }
           .reduce { acc, targets ->
             acc + targets
           }.toSet()
-      if (!usedDocuments.containsAll(installedDocument)) {
-        val danglingDocuments = installedDocument.filter { document ->
+      if (!usedDocuments.containsAll(installedDocuments)) {
+        val danglingDocuments = installedDocuments.filter { document ->
           !usedDocuments.contains(document)
         }
         warnings.add("""
@@ -121,7 +121,7 @@ class BarbershopBuilder : Barbershop.Builder {
 
       // Documents listed in DocumentTemplate.Targets must be installed
       val notInstalledDocument = compiledDocumentTemplate.targets.filter {
-        !installedDocument.contains(it)
+        !installedDocuments.contains(it)
       }
       if (notInstalledDocument.isNotEmpty()) {
         errors.add("""
