@@ -14,9 +14,9 @@ import app.cash.barber.examples.senderReceiptEmailDocumentTemplateEN_US
 import app.cash.barber.models.DocumentData
 import app.cash.barber.models.DocumentTemplate
 import app.cash.barber.models.Locale
-import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import org.junit.jupiter.api.Test
 
 class BarbershopBuilderTest {
   @Test

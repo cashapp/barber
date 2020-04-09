@@ -16,17 +16,9 @@ dependencies {
   implementation dep.mustacheCompiler
 
   testImplementation dep.assertj
-  testImplementation dep.kotlinTest
+  testImplementation dep.junitApi
   testImplementation dep.junitEngine
-}
-
-compileJava {
-  sourceCompatibility = 1.8
-  targetCompatibility = 1.8
-}
-
-jar {
-  baseName = "client"
+  testImplementation dep.kotlinTest
 }
 
 afterEvaluate { project ->
