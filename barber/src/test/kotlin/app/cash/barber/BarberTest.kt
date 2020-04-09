@@ -12,10 +12,10 @@ import app.cash.barber.models.DocumentTemplate
 import app.cash.barber.models.Locale.Companion.EN_CA
 import app.cash.barber.models.Locale.Companion.EN_GB
 import app.cash.barber.models.Locale.Companion.EN_US
+import kotlin.test.assertEquals
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
 
 /**
  * These our integration end to end tests
