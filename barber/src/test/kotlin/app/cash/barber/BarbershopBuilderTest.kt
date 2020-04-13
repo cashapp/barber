@@ -4,6 +4,7 @@ import app.cash.barber.examples.EmptyDocumentData
 import app.cash.barber.examples.NoParametersDocument
 import app.cash.barber.examples.RecipientReceipt
 import app.cash.barber.examples.SenderReceipt
+import app.cash.barber.examples.ShadowSmsDocument
 import app.cash.barber.examples.TransactionalEmailDocument
 import app.cash.barber.examples.TransactionalSmsDocument
 import app.cash.barber.examples.noParametersDocumentTemplate
@@ -78,12 +79,6 @@ class BarbershopBuilderTest {
       |DocumentTemplate.source: class app.cash.barber.examples.RecipientReceipt
       |DocumentData: class app.cash.barber.examples.SenderReceipt
       |
-      |2) Missing variable [sender] in DocumentData [class app.cash.barber.examples.SenderReceipt] for DocumentTemplate field [{{sender}} sent you {{amount}}. It will be available at {{ deposit_expected_at }}. Cancel here: {{ cancelUrl }}]
-      |
-      |Warnings
-      |1) Unused DocumentData variable [recipient] in [class app.cash.barber.examples.SenderReceipt] with no usage in installed DocumentTemplate Locales:
-      |[Locale=en-US]
-      |
       """.trimMargin(), exception.toString())
   }
 
@@ -117,6 +112,31 @@ class BarbershopBuilderTest {
       |1) Document installed that is not used in any installed DocumentTemplates
       |[class app.cash.barber.examples.TransactionalEmailDocument]
       |
+      |
+      """.trimMargin(), exception.toString())
+  }
+
+  @Test
+  fun `Fails on install of Documents with shadowed field names`() {
+    val exception = assertFailsWith<BarberException> {
+      BarbershopBuilder()
+          .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US.copy(
+              targets = setOf(TransactionalSmsDocument::class, ShadowSmsDocument::class)
+          ))
+          .installDocument<TransactionalSmsDocument>()
+          .installDocument<ShadowSmsDocument>()
+          .build()
+    }
+    assertEquals("""
+      |Errors
+      |1) Attempted to install Document that shadows an already installed Document's fields.
+      |Already Installed
+      |Documents: [class app.cash.barber.examples.TransactionalSmsDocument]
+      |Field: sms_body
+      |
+      |Attempted to Install
+      |Document: class app.cash.barber.examples.ShadowSmsDocument
+      |Overlapping Field: sms_body
       |
       """.trimMargin(), exception.toString())
   }

@@ -27,4 +27,3 @@ afterEvaluate { project ->
     outputFormat = 'gfm'
   }
 }
-

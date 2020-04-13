@@ -1,8 +1,12 @@
 package app.cash.barber
 
+import app.cash.barber.examples.EncodingTestDocument
+import app.cash.barber.examples.InvestmentPurchase
 import app.cash.barber.examples.RecipientReceipt
 import app.cash.barber.examples.TransactionalEmailDocument
 import app.cash.barber.examples.TransactionalSmsDocument
+import app.cash.barber.examples.investmentPurchasePlaintextSmsDocumentTemplateEN_US
+import app.cash.barber.examples.mcDonaldsInvestmentPurchase
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_CA
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_GB
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_US
@@ -204,6 +208,26 @@ class BarberTest {
     assertThat(spec).isEqualTo(
         TransactionalSmsDocument(
             sms_body = "Sandy Winchester sent you \$50. It will be available at 2019-05-21T16:02:00Z. Cancel here: https://cash.app/cancel/123"
+        )
+    )
+  }
+
+  @Test
+  fun `BarberField annotation configures Mustache render encoding per field`() {
+    val barber = BarbershopBuilder()
+        .installDocument<EncodingTestDocument>()
+        .installDocumentTemplate<InvestmentPurchase>(investmentPurchasePlaintextSmsDocumentTemplateEN_US)
+        .build()
+
+    val spec = barber.getBarber<InvestmentPurchase, EncodingTestDocument>()
+        .render(mcDonaldsInvestmentPurchase, EN_US)
+
+    assertThat(spec).isEqualTo(
+        EncodingTestDocument(
+            no_annotation_field = "You purchased 100 shares of McDonald&#39;s.",
+            default_field = "You purchased 100 shares of McDonald&#39;s.",
+            html_field = "You purchased 100 shares of McDonald&#39;s.",
+            plaintext_field = "You purchased 100 shares of McDonald's."
         )
     )
   }

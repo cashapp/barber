@@ -39,6 +39,10 @@ internal class RealBarbershop(
           |DocumentData [$documentDataClass] and corresponding DocumentTemplate(s) are not installed in Barbershop
         """.trimMargin())
       }
+      if (problems.isEmpty()) {
+        problems.add("Failed to get Barber<$documentDataClass, $documentClass>, unknown error")
+      }
+
       throw BarberException(problems)
     }
     return barber as Barber<DD, D>

@@ -14,6 +14,18 @@ val recipientReceiptSmsDocumentTemplateEN_US = DocumentTemplate(
     locale = EN_US
 )
 
+val investmentPurchasePlaintextSmsDocumentTemplateEN_US = DocumentTemplate(
+    fields = mapOf(
+        "no_annotation_field" to "You purchased {{ shares }} shares of {{ ticker }}.",
+        "default_field" to "You purchased {{ shares }} shares of {{ ticker }}.",
+        "html_field" to "You purchased {{ shares }} shares of {{ ticker }}.",
+        "plaintext_field" to "You purchased {{ shares }} shares of {{ ticker }}."
+    ),
+    source = InvestmentPurchase::class,
+    targets = setOf(EncodingTestDocument::class),
+    locale = EN_US
+)
+
 val recipientReceiptSmsEmailDocumentTemplateEN_US = DocumentTemplate(
     fields = mapOf(
         "subject" to "{{sender}} sent you {{amount}}",
