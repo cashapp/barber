@@ -43,4 +43,24 @@ class BarberExceptionTest {
       |
     """.trimMargin(), exception.toString())
   }
+
+  @Test
+  fun `null exception`() {
+    val exception = assertFailsWith<BarberException> { throw BarberException() }
+    assertEquals("""
+      |Unknown BarberException
+    """.trimMargin(), exception.toString())
+  }
+
+  @Test
+  fun `exception with message`() {
+    val exception = assertFailsWith<BarberException> { throw BarberException(listOf(
+        "Failed to get Barber<documentDataClass, documentClass>, unknown error"
+    )) }
+    assertEquals("""
+      |Errors
+      |1) Failed to get Barber<documentDataClass, documentClass>, unknown error
+      |
+    """.trimMargin(), exception.toString())
+  }
 }

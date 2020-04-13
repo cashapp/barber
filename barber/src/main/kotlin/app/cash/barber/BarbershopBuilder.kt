@@ -17,9 +17,10 @@ class BarbershopBuilder : Barbershop.Builder {
       HashBasedTable.create<KClass<out DocumentData>, Locale, CompiledDocumentTemplate>()
   private val installedDocumentTemplates =
       HashBasedTable.create<KClass<out DocumentData>, Locale, DocumentTemplate>()
-  private val installedDocuments = mutableSetOf<KClass<out Document>>()
-  private val installedFieldKeyDocumentKParameterMap =
-      mutableMapOf<String, Pair<KClass<out Document>, KParameter>>()
+//  private val installedDocuments = mutableSetOf<KClass<out Document>>()
+  private val installedDocuments =
+    HashBasedTable.create<String, KClass<out Document>, KParameter>()
+//    mutableMapOf<String, Pair<KClass<out Document>, KParameter>>()
   private val mustacheFactoryProvider = BarberMustacheFactoryProvider
   private var localeResolver: LocaleResolver = MatchOrFirstLocaleResolver
   private var warningsAsErrors: Boolean = false
@@ -52,14 +53,18 @@ class BarbershopBuilder : Barbershop.Builder {
       DD::class, documentTemplate)
 
   override fun installDocument(document: KClass<out Document>) = apply {
-    installedDocuments.add(document)
-    val documentParametersByFieldKey = document.primaryConstructor!!.asParameterNames()
-    documentParametersByFieldKey.forEach { (fieldKey, kParameter) ->
-      if (installedFieldKeyDocumentKParameterMap.containsKey(fieldKey)) {
+    val documentConstructor = document.primaryConstructor
+    if (documentConstructor == null) {
+      throw BarberException(errors = listOf("No primary constructor for Document [$document]"))
+    } else if (documentConstructor.parameters.isEmpty()) {
+      throw BarberException(errors = listOf("No fields included for Document [$document]"))
+    }
+    documentConstructor.asParameterNames().forEach { (fieldKey, kParameter) ->
+      if (installedDocuments.containsRow(fieldKey)) {
         throw BarberException(errors = listOf("""
           |Attempted to install Document that shadows an already installed Document's fields.
           |Already Installed
-          |Document: ${installedFieldKeyDocumentKParameterMap[fieldKey]!!.first}
+          |Documents: ${installedDocuments.row(fieldKey).keys}
           |Field: $fieldKey
           |
           |Attempted to Install
@@ -68,7 +73,7 @@ class BarbershopBuilder : Barbershop.Builder {
         """.trimMargin()))
       }
       fieldKey?.let {
-        installedFieldKeyDocumentKParameterMap[fieldKey] = Pair(document, kParameter)
+        installedDocuments.put(fieldKey, document, kParameter)
       }
     }
   }
@@ -98,21 +103,37 @@ class BarbershopBuilder : Barbershop.Builder {
         |No DocumentData or DocumentTemplates installed
       """.trimMargin())
     }
-    if (installedDocuments.isEmpty()) {
+    if (installedDocuments.isEmpty) {
       warnings.add("""
         |No Documents installed
       """.trimMargin())
     }
 
+    // Warn if Documents have field keys that shadow each other, thus preventing use of those
+    //  conflicting documents in the same DocumentTemplate
+    installedDocuments.cellSet().forEach { cell ->
+      val fieldKey = cell.rowKey!!
+      val conflictingFieldKeyShadowedDocuments = installedDocuments.row(fieldKey)
+      if (conflictingFieldKeyShadowedDocuments.size > 1) {
+        errors.add("""
+          |Document field names must be universally unique in order to support DocumentTemplates 
+          |that target multiple Documents
+          |
+          |Field Key: $fieldKey
+          |Conflicting Documents: $conflictingFieldKeyShadowedDocuments
+        """.trimMargin())
+      }
+    }
+
     // Warn if Documents are unused in DocumentTemplates
-    if (installedDocuments.isNotEmpty() && cellSet().isNotEmpty()) {
+    if (!installedDocuments.isEmpty && cellSet().isNotEmpty()) {
       val usedDocuments = cellSet()
           .map { it.value!!.targets }
           .reduce { acc, targets ->
             acc + targets
           }.toSet()
-      if (!usedDocuments.containsAll(installedDocuments)) {
-        val danglingDocuments = installedDocuments.filter { document ->
+      if (!usedDocuments.containsAll(installedDocuments.columnKeySet())) {
+        val danglingDocuments = installedDocuments.columnKeySet().filter { document ->
           !usedDocuments.contains(document)
         }
         warnings.add("""
@@ -127,7 +148,7 @@ class BarbershopBuilder : Barbershop.Builder {
     // can be raised before a flood of other errors below fail as a result of the above
     throwBarberException(errors = errors, warnings = warnings)
 
-    // Standard validation
+    // Compile DocumentTemplates and perform initial validation
     cellSet().forEach { cell ->
       val documentDataClass = cell.rowKey!!
       val documentTemplate = cell.value!!
@@ -143,7 +164,7 @@ class BarbershopBuilder : Barbershop.Builder {
 
       // Documents listed in DocumentTemplate.Targets must be installed
       val notInstalledDocument = documentTemplate.targets.filter {
-        !installedDocuments.contains(it)
+        !installedDocuments.columnKeySet().contains(it)
       }
       if (notInstalledDocument.isNotEmpty()) {
         errors.add("""
@@ -155,12 +176,23 @@ class BarbershopBuilder : Barbershop.Builder {
 
       // Compile templates according to the MustacheFactory matching to the Document field encoding
       val compiledDocumentTemplate = documentTemplate
-          .compile(mustacheFactoryProvider, installedFieldKeyDocumentKParameterMap)
+          .compile(mustacheFactoryProvider, installedDocuments)
       installedCompiledDocumentTemplates.put(
           documentDataClass,
           documentTemplate.locale,
           compiledDocumentTemplate
       )
+    }
+
+    // Throwing early makes debugging simpler for Barber developers as the above simple warnings
+    // can be raised before a flood of other errors below fail as a result of the above
+    throwBarberException(errors = errors, warnings = warnings)
+
+    // Standard validation
+    cellSet().forEach { cell ->
+      val documentDataClass = cell.rowKey!!
+      val documentTemplate = cell.value!!
+      val compiledDocumentTemplate = installedCompiledDocumentTemplates.get(cell.rowKey, cell.columnKey)
 
       // DocumentTemplates must only use variables from source DocumentData in their fields
       val documentDataConstructor = documentDataClass.primaryConstructor!!
@@ -177,18 +209,8 @@ class BarbershopBuilder : Barbershop.Builder {
 
       // Document targets must have primaryConstructor
       // and installedDocumentTemplates must be able to fulfill Document target parameter requirements
-      val allTargetParameters = documentTemplate.targets.map { documentClass ->
-        // Validate that Document has a Primary Constructor
-        val documentConstructor = documentClass.primaryConstructor
-        if (documentConstructor == null) {
-          errors.add("No primary constructor for Document [$documentClass]")
-          listOf()
-        } else if (documentConstructor.parameters.isEmpty()) {
-          errors.add("No fields included for Document [$documentClass]")
-          listOf()
-        } else {
-          documentConstructor.parameters
-        }
+      val allTargetParameters = documentTemplate.targets.map { document ->
+        installedDocuments.column(document).values.toSet()
       }.reduce { acc, params ->
         acc + params
       }.toSet()
