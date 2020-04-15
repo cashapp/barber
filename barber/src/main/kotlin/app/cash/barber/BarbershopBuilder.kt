@@ -1,5 +1,6 @@
 package app.cash.barber
 
+import app.cash.barber.models.BarberFieldEncoding
 import app.cash.barber.models.BarberKey
 import app.cash.barber.models.CompiledDocumentTemplate
 import app.cash.barber.models.Document
@@ -17,13 +18,13 @@ class BarbershopBuilder : Barbershop.Builder {
       HashBasedTable.create<KClass<out DocumentData>, Locale, CompiledDocumentTemplate>()
   private val installedDocumentTemplates =
       HashBasedTable.create<KClass<out DocumentData>, Locale, DocumentTemplate>()
-//  private val installedDocuments = mutableSetOf<KClass<out Document>>()
   private val installedDocuments =
-    HashBasedTable.create<String, KClass<out Document>, KParameter>()
-//    mutableMapOf<String, Pair<KClass<out Document>, KParameter>>()
-  private val mustacheFactoryProvider = BarberMustacheFactoryProvider
+      HashBasedTable.create<String, KClass<out Document>, KParameter>()
+  private var mustacheFactoryProvider = BarberMustacheFactoryProvider()
   private var localeResolver: LocaleResolver = MatchOrFirstLocaleResolver
   private var warningsAsErrors: Boolean = false
+  private var allowShadowedDocumentFieldNames: Boolean = false
+  private var allowableShadowedDocumentFieldNames: Set<String> = setOf()
   private val warnings = mutableListOf<String>()
 
   override fun installDocumentTemplate(
@@ -59,21 +60,9 @@ class BarbershopBuilder : Barbershop.Builder {
     } else if (documentConstructor.parameters.isEmpty()) {
       throw BarberException(errors = listOf("No fields included for Document [$document]"))
     }
-    documentConstructor.asParameterNames().forEach { (fieldKey, kParameter) ->
-      if (installedDocuments.containsRow(fieldKey)) {
-        throw BarberException(errors = listOf("""
-          |Attempted to install Document that shadows an already installed Document's fields.
-          |Already Installed
-          |Documents: ${installedDocuments.row(fieldKey).keys}
-          |Field: $fieldKey
-          |
-          |Attempted to Install
-          |Document: $document
-          |Overlapping Field: $fieldKey
-        """.trimMargin()))
-      }
-      fieldKey?.let {
-        installedDocuments.put(fieldKey, document, kParameter)
+    documentConstructor.asParameterNames().forEach { (fieldName, kParameter) ->
+      fieldName?.let {
+        installedDocuments.put(fieldName, document, kParameter)
       }
     }
   }
@@ -86,6 +75,15 @@ class BarbershopBuilder : Barbershop.Builder {
 
   override fun setWarningsAsErrors(): Barbershop.Builder = apply {
     warningsAsErrors = true
+  }
+
+  override fun setDefaultBarberFieldEncoding(encoding: BarberFieldEncoding): Barbershop.Builder = apply {
+    mustacheFactoryProvider = BarberMustacheFactoryProvider(encoding)
+  }
+
+  override fun allowShadowedDocumentFieldNames(namesAllowedToBeShadowed: Set<String>): Barbershop.Builder = apply {
+    allowShadowedDocumentFieldNames = true
+    allowableShadowedDocumentFieldNames = namesAllowedToBeShadowed
   }
 
   override fun build(): Barbershop = installedDocumentTemplates.validateAndCompile().asBarbershop()
@@ -111,15 +109,18 @@ class BarbershopBuilder : Barbershop.Builder {
 
     // Warn if Documents have field keys that shadow each other, thus preventing use of those
     //  conflicting documents in the same DocumentTemplate
-    installedDocuments.cellSet().forEach { cell ->
-      val fieldKey = cell.rowKey!!
-      val conflictingFieldKeyShadowedDocuments = installedDocuments.row(fieldKey)
-      if (conflictingFieldKeyShadowedDocuments.size > 1) {
-        errors.add("""
-          |Document field names must be universally unique in order to support DocumentTemplates 
-          |that target multiple Documents
+    installedDocuments.rowKeySet().forEach { fieldName ->
+      val nameNotAllowedToBeShadowed =
+          !allowShadowedDocumentFieldNames || !allowableShadowedDocumentFieldNames.contains(fieldName)
+      val conflictingFieldKeyShadowedDocuments = installedDocuments.row(fieldName).keys
+      if (nameNotAllowedToBeShadowed && conflictingFieldKeyShadowedDocuments.size > 1) {
+        warnings.add("""
+          |Document field names should be universally unique in order to support DocumentTemplates 
+          |that target multiple Documents with potentially unique BarberField annotations
           |
-          |Field Key: $fieldKey
+          |Add exceptions using the allowShadowedDocumentFieldNames() method on BarbershopBuilder
+          |
+          |Field Name: $fieldName
           |Conflicting Documents: $conflictingFieldKeyShadowedDocuments
         """.trimMargin())
       }
@@ -192,7 +193,8 @@ class BarbershopBuilder : Barbershop.Builder {
     cellSet().forEach { cell ->
       val documentDataClass = cell.rowKey!!
       val documentTemplate = cell.value!!
-      val compiledDocumentTemplate = installedCompiledDocumentTemplates.get(cell.rowKey, cell.columnKey)
+      val compiledDocumentTemplate =
+          installedCompiledDocumentTemplates.get(cell.rowKey, cell.columnKey)
 
       // DocumentTemplates must only use variables from source DocumentData in their fields
       val documentDataConstructor = documentDataClass.primaryConstructor!!
@@ -281,24 +283,26 @@ class BarbershopBuilder : Barbershop.Builder {
     }
 
     // Check for unused DocumentData variable not used in any installed DocumentTemplate field
-    installedCompiledDocumentTemplates.rowMap().forEach { (documentDataClass, compiledDocumentTemplates) ->
-      val codes = compiledDocumentTemplates.reducedFieldCodeSet()
+    installedCompiledDocumentTemplates.rowMap()
+        .forEach { (documentDataClass, compiledDocumentTemplates) ->
+          val codes = compiledDocumentTemplates.reducedFieldCodeSet()
 
-      val documentDataConstructor = documentDataClass.primaryConstructor
-      if (documentDataConstructor == null) {
-        errors.add("Null primary constructor for DocumentData $documentDataClass")
-      } else {
-        val documentDataParameterNames = documentDataConstructor.parameters.map { it.name }.toList()
-        documentDataParameterNames.forEach { parameter ->
-          if (!codes.map { it.rootKey() }.contains(parameter)) {
-            warnings.add("""
+          val documentDataConstructor = documentDataClass.primaryConstructor
+          if (documentDataConstructor == null) {
+            errors.add("Null primary constructor for DocumentData $documentDataClass")
+          } else {
+            val documentDataParameterNames =
+                documentDataConstructor.parameters.map { it.name }.toList()
+            documentDataParameterNames.forEach { parameter ->
+              if (!codes.map { it.rootKey() }.contains(parameter)) {
+                warnings.add("""
                 |Unused DocumentData variable [$parameter] in [$documentDataClass] with no usage in installed DocumentTemplate Locales:
                 |${compiledDocumentTemplates.keys.joinToString("\n")}
               """.trimMargin())
+              }
+            }
           }
         }
-      }
-    }
 
     throwBarberException(errors = errors, warnings = warnings)
 

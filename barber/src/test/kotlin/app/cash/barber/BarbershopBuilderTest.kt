@@ -1,22 +1,30 @@
 package app.cash.barber
 
 import app.cash.barber.examples.EmptyDocumentData
+import app.cash.barber.examples.EncodingTestDocument
+import app.cash.barber.examples.InvestmentPurchase
 import app.cash.barber.examples.NoParametersDocument
 import app.cash.barber.examples.RecipientReceipt
 import app.cash.barber.examples.SenderReceipt
+import app.cash.barber.examples.ShadowEncodingTestDocument
 import app.cash.barber.examples.ShadowSmsDocument
 import app.cash.barber.examples.TransactionalEmailDocument
 import app.cash.barber.examples.TransactionalSmsDocument
+import app.cash.barber.examples.investmentPurchaseEncodingDocumentTemplateEN_US
+import app.cash.barber.examples.investmentPurchaseShadowEncodingDocumentTemplateEN_US
+import app.cash.barber.examples.mcDonaldsInvestmentPurchase
 import app.cash.barber.examples.noParametersDocumentTemplate
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_CA
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_GB
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_US
 import app.cash.barber.examples.senderReceiptEmailDocumentTemplateEN_US
+import app.cash.barber.models.BarberFieldEncoding
 import app.cash.barber.models.DocumentData
 import app.cash.barber.models.DocumentTemplate
 import app.cash.barber.models.Locale
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Test
 
 class BarbershopBuilderTest {
@@ -125,20 +133,92 @@ class BarbershopBuilderTest {
           ))
           .installDocument<TransactionalSmsDocument>()
           .installDocument<ShadowSmsDocument>()
+          .setWarningsAsErrors()
           .build()
     }
-    assertEquals("""
-      |Errors
-      |1) Attempted to install Document that shadows an already installed Document's fields.
-      |Already Installed
-      |Documents: [class app.cash.barber.examples.TransactionalSmsDocument]
-      |Field: sms_body
+    assertEquals(
+      """
+      |Warnings
+      |1) Document field names should be universally unique in order to support DocumentTemplates 
+      |that target multiple Documents with potentially unique BarberField annotations
       |
-      |Attempted to Install
-      |Document: class app.cash.barber.examples.ShadowSmsDocument
-      |Overlapping Field: sms_body
+      |Add exceptions using the allowShadowedDocumentFieldNames() method on BarbershopBuilder
+      |
+      |Field Name: sms_body
+      |Conflicting Documents: [class app.cash.barber.examples.TransactionalSmsDocument, class app.cash.barber.examples.ShadowSmsDocument]
       |
       """.trimMargin(), exception.toString())
+  }
+
+  @Test
+  fun `Installs Documents with shadowed field names if global exception configured`() {
+    BarbershopBuilder()
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US.copy(
+            targets = setOf(TransactionalSmsDocument::class, ShadowSmsDocument::class)
+        ))
+        .installDocument<TransactionalSmsDocument>()
+        .installDocument<ShadowSmsDocument>()
+        .allowShadowedDocumentFieldNames()
+        .build()
+  }
+
+  @Test
+  fun `Installs Documents with shadowed field names if individual exception configured`() {
+    BarbershopBuilder()
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US.copy(
+            targets = setOf(TransactionalSmsDocument::class, ShadowSmsDocument::class)
+        ))
+        .installDocument<TransactionalSmsDocument>()
+        .installDocument<ShadowSmsDocument>()
+        .allowShadowedDocumentFieldNames(setOf("sms_body"))
+        .build()
+  }
+
+  @Test
+  fun `Fails on install of Documents with shadowed field name not in override list`() {
+    val exception = assertFailsWith<BarberException> {
+      BarbershopBuilder()
+          .installDocumentTemplate<InvestmentPurchase>(investmentPurchaseShadowEncodingDocumentTemplateEN_US)
+          .installDocument<EncodingTestDocument>()
+          .installDocument<ShadowEncodingTestDocument>()
+          .setWarningsAsErrors()
+          .allowShadowedDocumentFieldNames(setOf("no_annotation_field", "default_field", "html_field"))
+          .build()
+    }
+    assertEquals(
+        """
+        |Warnings
+        |1) Document field names should be universally unique in order to support DocumentTemplates 
+        |that target multiple Documents with potentially unique BarberField annotations
+        |
+        |Add exceptions using the allowShadowedDocumentFieldNames() method on BarbershopBuilder
+        |
+        |Field Name: plaintext_field
+        |Conflicting Documents: [class app.cash.barber.examples.EncodingTestDocument, class app.cash.barber.examples.ShadowEncodingTestDocument]
+        |
+        """.trimMargin(), exception.toString())
+  }
+
+  @Test
+  fun `setDefaultBarberFieldEncoding changes non-annotated field render encoding`() {
+    val barber = BarbershopBuilder()
+        .installDocument<EncodingTestDocument>()
+        .installDocumentTemplate<InvestmentPurchase>(investmentPurchaseEncodingDocumentTemplateEN_US)
+        .setDefaultBarberFieldEncoding(BarberFieldEncoding.STRING_PLAINTEXT)
+        .build()
+
+    val spec = barber.getBarber<InvestmentPurchase, EncodingTestDocument>()
+        .render(mcDonaldsInvestmentPurchase, Locale.EN_US)
+
+    Assertions.assertThat(spec).isEqualTo(
+        EncodingTestDocument(
+            // Using the default HTML encoding, the apostrophe in no_annotation_field have been escaped.
+            no_annotation_field = "You purchased 100 shares of McDonald's.",
+            default_field = "You purchased 100 shares of McDonald&#39;s.",
+            html_field = "You purchased 100 shares of McDonald&#39;s.",
+            plaintext_field = "You purchased 100 shares of McDonald's."
+        )
+    )
   }
 
   @Test

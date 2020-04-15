@@ -1,5 +1,6 @@
 package app.cash.barber
 
+import app.cash.barber.models.BarberFieldEncoding
 import app.cash.barber.models.BarberKey
 import app.cash.barber.models.Document
 import app.cash.barber.models.DocumentData
@@ -49,6 +50,23 @@ interface Barbershop {
      * only errors, not warnings, lead to fatal BarberException during validation.
      */
     fun setWarningsAsErrors(): Builder
+
+    /**
+     * Configures this barbershop to use a given [BarberFieldEncoding] when no annotation to override
+     * is present. By default, [BarberFieldEncoding.STRING_HTML] is used.
+     */
+    fun setDefaultBarberFieldEncoding(encoding: BarberFieldEncoding): Builder
+
+    /**
+     * Allows Documents to have common field names. Useful when documents of a similar type share a
+     * common identifier field name that has no annotation or per Document configuration that would
+     * make shadowing a problem. By default, no field names are allowed to be shadowed.
+     *
+     * @param namesAllowedToBeShadowed
+     *  * Configured with an empty set, any field name is allowed to be shadowed across documents.
+     *  * Used with a set of names, only the names in the set are allowed to be shadowed.
+     */
+    fun allowShadowedDocumentFieldNames(namesAllowedToBeShadowed: Set<String> = setOf()): Builder
 
     /**
      * Validates that all templates, document datas, and documents are mutually consistent and

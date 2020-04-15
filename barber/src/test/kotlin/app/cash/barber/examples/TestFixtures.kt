@@ -14,7 +14,7 @@ val recipientReceiptSmsDocumentTemplateEN_US = DocumentTemplate(
     locale = EN_US
 )
 
-val investmentPurchasePlaintextSmsDocumentTemplateEN_US = DocumentTemplate(
+val investmentPurchaseEncodingDocumentTemplateEN_US = DocumentTemplate(
     fields = mapOf(
         "no_annotation_field" to "You purchased {{ shares }} shares of {{ ticker }}.",
         "default_field" to "You purchased {{ shares }} shares of {{ ticker }}.",
@@ -23,6 +23,19 @@ val investmentPurchasePlaintextSmsDocumentTemplateEN_US = DocumentTemplate(
     ),
     source = InvestmentPurchase::class,
     targets = setOf(EncodingTestDocument::class),
+    locale = EN_US
+)
+
+val investmentPurchaseShadowEncodingDocumentTemplateEN_US = DocumentTemplate(
+    fields = mapOf(
+        "no_annotation_field" to "You purchased {{ shares }} shares of {{ ticker }}.",
+        "default_field" to "You purchased {{ shares }} shares of {{ ticker }}.",
+        "html_field" to "You purchased {{ shares }} shares of {{ ticker }}.",
+        "plaintext_field" to "You purchased {{ shares }} shares of {{ ticker }}.",
+        "non_shadow_field" to "You purchased {{ shares }} shares of {{ ticker }}."
+    ),
+    source = InvestmentPurchase::class,
+    targets = setOf(EncodingTestDocument::class, ShadowEncodingTestDocument::class),
     locale = EN_US
 )
 
