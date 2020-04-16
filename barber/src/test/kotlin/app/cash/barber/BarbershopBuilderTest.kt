@@ -1,22 +1,29 @@
 package app.cash.barber
 
 import app.cash.barber.examples.EmptyDocumentData
+import app.cash.barber.examples.EncodingTestDocument
+import app.cash.barber.examples.InvestmentPurchase
 import app.cash.barber.examples.NoParametersDocument
 import app.cash.barber.examples.RecipientReceipt
 import app.cash.barber.examples.SenderReceipt
-import app.cash.barber.examples.ShadowSmsDocument
+import app.cash.barber.examples.ShadowEncodingEverythingPlaintextTestDocument
 import app.cash.barber.examples.TransactionalEmailDocument
 import app.cash.barber.examples.TransactionalSmsDocument
+import app.cash.barber.examples.investmentPurchaseEncodingDocumentTemplateEN_US
+import app.cash.barber.examples.investmentPurchaseShadowEncodingDocumentTemplateEN_US
+import app.cash.barber.examples.mcDonaldsInvestmentPurchase
 import app.cash.barber.examples.noParametersDocumentTemplate
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_CA
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_GB
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_US
 import app.cash.barber.examples.senderReceiptEmailDocumentTemplateEN_US
+import app.cash.barber.models.BarberFieldEncoding
 import app.cash.barber.models.DocumentData
 import app.cash.barber.models.DocumentTemplate
 import app.cash.barber.models.Locale
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 class BarbershopBuilderTest {
@@ -117,28 +124,65 @@ class BarbershopBuilderTest {
   }
 
   @Test
-  fun `Fails on install of Documents with shadowed field names`() {
-    val exception = assertFailsWith<BarberException> {
-      BarbershopBuilder()
-          .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US.copy(
-              targets = setOf(TransactionalSmsDocument::class, ShadowSmsDocument::class)
-          ))
-          .installDocument<TransactionalSmsDocument>()
-          .installDocument<ShadowSmsDocument>()
-          .build()
-    }
-    assertEquals("""
-      |Errors
-      |1) Attempted to install Document that shadows an already installed Document's fields.
-      |Already Installed
-      |Documents: [class app.cash.barber.examples.TransactionalSmsDocument]
-      |Field: sms_body
-      |
-      |Attempted to Install
-      |Document: class app.cash.barber.examples.ShadowSmsDocument
-      |Overlapping Field: sms_body
-      |
-      """.trimMargin(), exception.toString())
+  fun `Renders correctly Documents with shadow fields with different encoding`() {
+    val barber = BarbershopBuilder()
+        .installDocumentTemplate<InvestmentPurchase>(
+            investmentPurchaseShadowEncodingDocumentTemplateEN_US)
+        .installDocument<EncodingTestDocument>()
+        .installDocument<ShadowEncodingEverythingPlaintextTestDocument>()
+        .setWarningsAsErrors()
+        .build()
+
+    val specRegular = barber.getBarber<InvestmentPurchase, EncodingTestDocument>()
+        .render(mcDonaldsInvestmentPurchase, Locale.EN_US)
+
+    assertThat(specRegular).isEqualTo(
+        EncodingTestDocument(
+            no_annotation_field = "You purchased 100 shares of McDonald&#39;s.",
+            default_field = "You purchased 100 shares of McDonald&#39;s.",
+            html_field = "You purchased 100 shares of McDonald&#39;s.",
+            plaintext_field = "You purchased 100 shares of McDonald's."
+        )
+    )
+
+    val specShadow =
+        barber.getBarber<InvestmentPurchase, ShadowEncodingEverythingPlaintextTestDocument>()
+            .render(mcDonaldsInvestmentPurchase, Locale.EN_US)
+
+    assertThat(specShadow).isEqualTo(
+        ShadowEncodingEverythingPlaintextTestDocument(
+            // Notice all shadowed fields are still rendered with the correct Plaintext encoding
+            // even though they conflict in name with the above target document that has HTML encoding
+            no_annotation_field = "You purchased 100 shares of McDonald's.",
+            default_field = "You purchased 100 shares of McDonald's.",
+            html_field = "You purchased 100 shares of McDonald's.",
+            plaintext_field = "You purchased 100 shares of McDonald's.",
+            non_shadow_field = "You purchased 100 shares of McDonald's."
+        )
+    )
+  }
+
+  @Test
+  fun `setDefaultBarberFieldEncoding changes non-annotated field render encoding`() {
+    val barber = BarbershopBuilder()
+        .installDocument<EncodingTestDocument>()
+        .installDocumentTemplate<InvestmentPurchase>(
+            investmentPurchaseEncodingDocumentTemplateEN_US)
+        .setDefaultBarberFieldEncoding(BarberFieldEncoding.STRING_PLAINTEXT)
+        .build()
+
+    val spec = barber.getBarber<InvestmentPurchase, EncodingTestDocument>()
+        .render(mcDonaldsInvestmentPurchase, Locale.EN_US)
+
+    assertThat(spec).isEqualTo(
+        EncodingTestDocument(
+            // Using the default HTML encoding, the apostrophe in no_annotation_field have been escaped.
+            no_annotation_field = "You purchased 100 shares of McDonald's.",
+            default_field = "You purchased 100 shares of McDonald&#39;s.",
+            html_field = "You purchased 100 shares of McDonald&#39;s.",
+            plaintext_field = "You purchased 100 shares of McDonald's."
+        )
+    )
   }
 
   @Test
@@ -206,7 +250,7 @@ class BarbershopBuilderTest {
 
   @Test
   fun `Fails when DocumentTemplate does not have sufficient fields for target Document`() {
-    val recipientReceiptDocumentData = DocumentTemplate(
+    val recipientReceiptDocumentTemplate = DocumentTemplate(
         fields = mapOf(
             "subject" to "{{ sender }} sent {{ amount }} on {{ deposit_expected_at }}. Cancel here: {{ cancelUrl }}"
         ),
@@ -217,7 +261,7 @@ class BarbershopBuilderTest {
 
     val exception = assertFailsWith<BarberException> {
       BarbershopBuilder()
-          .installDocumentTemplate<RecipientReceipt>(recipientReceiptDocumentData)
+          .installDocumentTemplate<RecipientReceipt>(recipientReceiptDocumentTemplate)
           .installDocument<TransactionalSmsDocument>()
           .build()
     }

@@ -1,7 +1,9 @@
 package app.cash.barber
 
+import app.cash.barber.models.BarberFieldEncoding
 import app.cash.barber.models.BarberKey
 import app.cash.barber.models.CompiledDocumentTemplate
+import app.cash.barber.models.CompiledDocumentTemplate.Companion.reduceToValuesSet
 import app.cash.barber.models.Document
 import app.cash.barber.models.DocumentData
 import app.cash.barber.models.DocumentTemplate
@@ -17,11 +19,9 @@ class BarbershopBuilder : Barbershop.Builder {
       HashBasedTable.create<KClass<out DocumentData>, Locale, CompiledDocumentTemplate>()
   private val installedDocumentTemplates =
       HashBasedTable.create<KClass<out DocumentData>, Locale, DocumentTemplate>()
-//  private val installedDocuments = mutableSetOf<KClass<out Document>>()
   private val installedDocuments =
-    HashBasedTable.create<String, KClass<out Document>, KParameter>()
-//    mutableMapOf<String, Pair<KClass<out Document>, KParameter>>()
-  private val mustacheFactoryProvider = BarberMustacheFactoryProvider
+      HashBasedTable.create<String, KClass<out Document>, KParameter>()
+  private var mustacheFactoryProvider = BarberMustacheFactoryProvider()
   private var localeResolver: LocaleResolver = MatchOrFirstLocaleResolver
   private var warningsAsErrors: Boolean = false
   private val warnings = mutableListOf<String>()
@@ -59,21 +59,9 @@ class BarbershopBuilder : Barbershop.Builder {
     } else if (documentConstructor.parameters.isEmpty()) {
       throw BarberException(errors = listOf("No fields included for Document [$document]"))
     }
-    documentConstructor.asParameterNames().forEach { (fieldKey, kParameter) ->
-      if (installedDocuments.containsRow(fieldKey)) {
-        throw BarberException(errors = listOf("""
-          |Attempted to install Document that shadows an already installed Document's fields.
-          |Already Installed
-          |Documents: ${installedDocuments.row(fieldKey).keys}
-          |Field: $fieldKey
-          |
-          |Attempted to Install
-          |Document: $document
-          |Overlapping Field: $fieldKey
-        """.trimMargin()))
-      }
-      fieldKey?.let {
-        installedDocuments.put(fieldKey, document, kParameter)
+    documentConstructor.asParameterNames().forEach { (fieldName, kParameter) ->
+      fieldName?.let {
+        installedDocuments.put(fieldName, document, kParameter)
       }
     }
   }
@@ -86,6 +74,10 @@ class BarbershopBuilder : Barbershop.Builder {
 
   override fun setWarningsAsErrors(): Barbershop.Builder = apply {
     warningsAsErrors = true
+  }
+
+  override fun setDefaultBarberFieldEncoding(encoding: BarberFieldEncoding): Barbershop.Builder = apply {
+    mustacheFactoryProvider = BarberMustacheFactoryProvider(encoding)
   }
 
   override fun build(): Barbershop = installedDocumentTemplates.validateAndCompile().asBarbershop()
@@ -109,22 +101,6 @@ class BarbershopBuilder : Barbershop.Builder {
       """.trimMargin())
     }
 
-    // Warn if Documents have field keys that shadow each other, thus preventing use of those
-    //  conflicting documents in the same DocumentTemplate
-    installedDocuments.cellSet().forEach { cell ->
-      val fieldKey = cell.rowKey!!
-      val conflictingFieldKeyShadowedDocuments = installedDocuments.row(fieldKey)
-      if (conflictingFieldKeyShadowedDocuments.size > 1) {
-        errors.add("""
-          |Document field names must be universally unique in order to support DocumentTemplates 
-          |that target multiple Documents
-          |
-          |Field Key: $fieldKey
-          |Conflicting Documents: $conflictingFieldKeyShadowedDocuments
-        """.trimMargin())
-      }
-    }
-
     // Warn if Documents are unused in DocumentTemplates
     if (!installedDocuments.isEmpty && cellSet().isNotEmpty()) {
       val usedDocuments = cellSet()
@@ -144,9 +120,7 @@ class BarbershopBuilder : Barbershop.Builder {
       }
     }
 
-    // Throwing early makes debugging simpler for Barber developers as the above simple warnings
-    // can be raised before a flood of other errors below fail as a result of the above
-    throwBarberException(errors = errors, warnings = warnings)
+    maybeThrowBarberException(errors = errors, warnings = warnings)
 
     // Compile DocumentTemplates and perform initial validation
     cellSet().forEach { cell ->
@@ -184,20 +158,19 @@ class BarbershopBuilder : Barbershop.Builder {
       )
     }
 
-    // Throwing early makes debugging simpler for Barber developers as the above simple warnings
-    // can be raised before a flood of other errors below fail as a result of the above
-    throwBarberException(errors = errors, warnings = warnings)
+    maybeThrowBarberException(errors = errors, warnings = warnings)
 
     // Standard validation
     cellSet().forEach { cell ->
       val documentDataClass = cell.rowKey!!
       val documentTemplate = cell.value!!
-      val compiledDocumentTemplate = installedCompiledDocumentTemplates.get(cell.rowKey, cell.columnKey)
+      val compiledDocumentTemplate =
+          installedCompiledDocumentTemplates.get(cell.rowKey, cell.columnKey)
 
       // DocumentTemplates must only use variables from source DocumentData in their fields
       val documentDataConstructor = documentDataClass.primaryConstructor!!
       val documentDataParameterNames = documentDataConstructor.asParameterNames()
-      compiledDocumentTemplate.fields.asFieldCodesMap().forEach { (name, codes) ->
+      compiledDocumentTemplate.reducedFieldCodeMap().forEach { (name, codes) ->
         // Check for missing variables in field templates
         codes.forEach { code ->
           if (!documentDataParameterNames.contains(code.rootKey())) {
@@ -280,32 +253,42 @@ class BarbershopBuilder : Barbershop.Builder {
       }
     }
 
-    // Check for unused DocumentData variable not used in any installed DocumentTemplate field
-    installedCompiledDocumentTemplates.rowMap().forEach { (documentDataClass, compiledDocumentTemplates) ->
-      val codes = compiledDocumentTemplates.reducedFieldCodeSet()
+    maybeThrowBarberException(errors = errors, warnings = warnings)
 
-      val documentDataConstructor = documentDataClass.primaryConstructor
-      if (documentDataConstructor == null) {
-        errors.add("Null primary constructor for DocumentData $documentDataClass")
-      } else {
-        val documentDataParameterNames = documentDataConstructor.parameters.map { it.name }.toList()
-        documentDataParameterNames.forEach { parameter ->
-          if (!codes.map { it.rootKey() }.contains(parameter)) {
-            warnings.add("""
+    // Check for unused DocumentData variable not used in any installed DocumentTemplate field
+    installedCompiledDocumentTemplates.rowMap()
+        .forEach { (documentDataClass, compiledDocumentTemplates) ->
+          val codes = compiledDocumentTemplates.mapValues { (_, compiledDocumentTemplate) ->
+            compiledDocumentTemplate.reducedFieldCodeSet()
+          }.reduceToValuesSet()
+
+          val documentDataConstructor = documentDataClass.primaryConstructor
+          if (documentDataConstructor == null) {
+            errors.add("Null primary constructor for DocumentData $documentDataClass")
+          } else {
+            val documentDataParameterNames =
+                documentDataConstructor.parameters.map { it.name }.toList()
+            documentDataParameterNames.forEach { parameter ->
+              if (!codes.map { it.rootKey() }.contains(parameter)) {
+                warnings.add("""
                 |Unused DocumentData variable [$parameter] in [$documentDataClass] with no usage in installed DocumentTemplate Locales:
                 |${compiledDocumentTemplates.keys.joinToString("\n")}
               """.trimMargin())
+              }
+            }
           }
         }
-      }
-    }
 
-    throwBarberException(errors = errors, warnings = warnings)
+    maybeThrowBarberException(errors = errors, warnings = warnings)
 
     return installedCompiledDocumentTemplates
   }
 
-  private fun throwBarberException(errors: List<String>, warnings: List<String>) {
+  /**
+   * Throwing early makes debugging simpler for Barber developers as the above simple warnings
+   * can be raised before a flood of other errors below fail as a result of the above
+   */
+  private fun maybeThrowBarberException(errors: List<String>, warnings: List<String>) {
     if (errors.isNotEmpty() || (warnings.isNotEmpty() && warningsAsErrors)) {
       throw BarberException(errors = errors, warnings = warnings)
     }
@@ -319,7 +302,8 @@ class BarbershopBuilder : Barbershop.Builder {
       documentTemplate.targets.forEach { documentClass ->
         val documentTemplatesBySource = row(documentTemplate.source)
         barbers[BarberKey(documentDataClass, documentClass)] = RealBarber(
-            documentConstructor = documentClass.primaryConstructor!!,
+            document = documentClass,
+            installedDocuments = installedDocuments,
             compiledDocumentTemplateLocales = documentTemplatesBySource.mapValues { it.value },
             localeResolver = localeResolver
         )

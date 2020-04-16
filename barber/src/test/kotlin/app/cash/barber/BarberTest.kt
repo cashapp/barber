@@ -5,7 +5,7 @@ import app.cash.barber.examples.InvestmentPurchase
 import app.cash.barber.examples.RecipientReceipt
 import app.cash.barber.examples.TransactionalEmailDocument
 import app.cash.barber.examples.TransactionalSmsDocument
-import app.cash.barber.examples.investmentPurchasePlaintextSmsDocumentTemplateEN_US
+import app.cash.barber.examples.investmentPurchaseEncodingDocumentTemplateEN_US
 import app.cash.barber.examples.mcDonaldsInvestmentPurchase
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_CA
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_GB
@@ -216,7 +216,7 @@ class BarberTest {
   fun `BarberField annotation configures Mustache render encoding per field`() {
     val barber = BarbershopBuilder()
         .installDocument<EncodingTestDocument>()
-        .installDocumentTemplate<InvestmentPurchase>(investmentPurchasePlaintextSmsDocumentTemplateEN_US)
+        .installDocumentTemplate<InvestmentPurchase>(investmentPurchaseEncodingDocumentTemplateEN_US)
         .build()
 
     val spec = barber.getBarber<InvestmentPurchase, EncodingTestDocument>()

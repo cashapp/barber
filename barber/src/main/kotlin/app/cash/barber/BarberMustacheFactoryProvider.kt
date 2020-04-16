@@ -7,11 +7,13 @@ import com.github.mustachejava.DefaultMustacheFactory
 /**
  * Provides a MustacheFactory depending on the [BarberFieldEncoding] of the [Document] field
  */
-object BarberMustacheFactoryProvider {
+class BarberMustacheFactoryProvider(
+  private val defaultBarberFieldEncoding: BarberFieldEncoding = BarberFieldEncoding.STRING_HTML
+) {
   private val defaultMustacheFactory = DefaultMustacheFactory()
   private val barberPlaintextMustacheFactory = BarberPlaintextMustacheFactory()
-  fun get(encoding: BarberFieldEncoding?) = when (encoding) {
+  fun get(encoding: BarberFieldEncoding?) = when (encoding ?: defaultBarberFieldEncoding) {
     BarberFieldEncoding.STRING_PLAINTEXT -> barberPlaintextMustacheFactory
-    BarberFieldEncoding.STRING_HTML, null -> defaultMustacheFactory
+    BarberFieldEncoding.STRING_HTML -> defaultMustacheFactory
   }
 }

@@ -1,5 +1,6 @@
 package app.cash.barber
 
+import app.cash.barber.models.BarberFieldEncoding
 import app.cash.barber.models.BarberKey
 import app.cash.barber.models.Document
 import app.cash.barber.models.DocumentData
@@ -49,6 +50,12 @@ interface Barbershop {
      * only errors, not warnings, lead to fatal BarberException during validation.
      */
     fun setWarningsAsErrors(): Builder
+
+    /**
+     * Configures this barbershop to use a given [BarberFieldEncoding] when no annotation to override
+     * is present. By default, [BarberFieldEncoding.STRING_HTML] is used.
+     */
+    fun setDefaultBarberFieldEncoding(encoding: BarberFieldEncoding): Builder
 
     /**
      * Validates that all templates, document datas, and documents are mutually consistent and

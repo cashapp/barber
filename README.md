@@ -145,7 +145,9 @@ A Java style Builder that installs all of the above Barber elements and returns 
 
 - Install `DocumentData` and `DocumentTemplate` pairs with `.installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)`.
 - Install `Document` with `.installDocument<TransactionalSmsDocument>()`
-- Set a custom `LocaleResolver` with `.setLocaleResolver(MapleSyrupOrFirstLocaleResolver())`
+- Optionally set a custom `LocaleResolver` with `.setLocaleResolver(MapleSyrupOrFirstLocaleResolver())`
+- Optionally set a default `BarberFieldEncoding` for non-annotated Document fields with `.setDefaultBarberFieldEncoding(STRING_PLAINTEXT)`
+- Optionally configure warning validation strictness with `.setWarningsAsErrors()`
 - Return the finished Barbershop with `.build()` as the final method call on BarbershopBuilder.
 
 ```kotlin
