@@ -58,17 +58,6 @@ interface Barbershop {
     fun setDefaultBarberFieldEncoding(encoding: BarberFieldEncoding): Builder
 
     /**
-     * Allows Documents to have common field names. Useful when documents of a similar type share a
-     * common identifier field name that has no annotation or per Document configuration that would
-     * make shadowing a problem. By default, no field names are allowed to be shadowed.
-     *
-     * @param namesAllowedToBeShadowed
-     *  * Configured with an empty set, any field name is allowed to be shadowed across documents.
-     *  * Used with a set of names, only the names in the set are allowed to be shadowed.
-     */
-    fun allowShadowedDocumentFieldNames(namesAllowedToBeShadowed: Set<String> = setOf()): Builder
-
-    /**
      * Validates that all templates, document datas, and documents are mutually consistent and
      * returns a new Barbershop.
      */

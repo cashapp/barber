@@ -3,6 +3,7 @@ package app.cash.barber
 import app.cash.barber.models.BarberFieldEncoding
 import app.cash.barber.models.BarberKey
 import app.cash.barber.models.CompiledDocumentTemplate
+import app.cash.barber.models.CompiledDocumentTemplate.Companion.reduceToValuesSet
 import app.cash.barber.models.Document
 import app.cash.barber.models.DocumentData
 import app.cash.barber.models.DocumentTemplate
@@ -23,8 +24,6 @@ class BarbershopBuilder : Barbershop.Builder {
   private var mustacheFactoryProvider = BarberMustacheFactoryProvider()
   private var localeResolver: LocaleResolver = MatchOrFirstLocaleResolver
   private var warningsAsErrors: Boolean = false
-  private var allowShadowedDocumentFieldNames: Boolean = false
-  private var allowableShadowedDocumentFieldNames: Set<String> = setOf()
   private val warnings = mutableListOf<String>()
 
   override fun installDocumentTemplate(
@@ -81,11 +80,6 @@ class BarbershopBuilder : Barbershop.Builder {
     mustacheFactoryProvider = BarberMustacheFactoryProvider(encoding)
   }
 
-  override fun allowShadowedDocumentFieldNames(namesAllowedToBeShadowed: Set<String>): Barbershop.Builder = apply {
-    allowShadowedDocumentFieldNames = true
-    allowableShadowedDocumentFieldNames = namesAllowedToBeShadowed
-  }
-
   override fun build(): Barbershop = installedDocumentTemplates.validateAndCompile().asBarbershop()
 
   /**
@@ -107,25 +101,6 @@ class BarbershopBuilder : Barbershop.Builder {
       """.trimMargin())
     }
 
-    // Warn if Documents have field keys that shadow each other, thus preventing use of those
-    //  conflicting documents in the same DocumentTemplate
-    installedDocuments.rowKeySet().forEach { fieldName ->
-      val nameNotAllowedToBeShadowed =
-          !allowShadowedDocumentFieldNames || !allowableShadowedDocumentFieldNames.contains(fieldName)
-      val conflictingFieldKeyShadowedDocuments = installedDocuments.row(fieldName).keys
-      if (nameNotAllowedToBeShadowed && conflictingFieldKeyShadowedDocuments.size > 1) {
-        warnings.add("""
-          |Document field names should be universally unique in order to support DocumentTemplates 
-          |that target multiple Documents with potentially unique BarberField annotations
-          |
-          |Add exceptions using the allowShadowedDocumentFieldNames() method on BarbershopBuilder
-          |
-          |Field Name: $fieldName
-          |Conflicting Documents: $conflictingFieldKeyShadowedDocuments
-        """.trimMargin())
-      }
-    }
-
     // Warn if Documents are unused in DocumentTemplates
     if (!installedDocuments.isEmpty && cellSet().isNotEmpty()) {
       val usedDocuments = cellSet()
@@ -145,9 +120,7 @@ class BarbershopBuilder : Barbershop.Builder {
       }
     }
 
-    // Throwing early makes debugging simpler for Barber developers as the above simple warnings
-    // can be raised before a flood of other errors below fail as a result of the above
-    throwBarberException(errors = errors, warnings = warnings)
+    maybeThrowBarberException(errors = errors, warnings = warnings)
 
     // Compile DocumentTemplates and perform initial validation
     cellSet().forEach { cell ->
@@ -185,9 +158,7 @@ class BarbershopBuilder : Barbershop.Builder {
       )
     }
 
-    // Throwing early makes debugging simpler for Barber developers as the above simple warnings
-    // can be raised before a flood of other errors below fail as a result of the above
-    throwBarberException(errors = errors, warnings = warnings)
+    maybeThrowBarberException(errors = errors, warnings = warnings)
 
     // Standard validation
     cellSet().forEach { cell ->
@@ -199,7 +170,7 @@ class BarbershopBuilder : Barbershop.Builder {
       // DocumentTemplates must only use variables from source DocumentData in their fields
       val documentDataConstructor = documentDataClass.primaryConstructor!!
       val documentDataParameterNames = documentDataConstructor.asParameterNames()
-      compiledDocumentTemplate.fields.asFieldCodesMap().forEach { (name, codes) ->
+      compiledDocumentTemplate.reducedFieldCodeMap().forEach { (name, codes) ->
         // Check for missing variables in field templates
         codes.forEach { code ->
           if (!documentDataParameterNames.contains(code.rootKey())) {
@@ -282,10 +253,14 @@ class BarbershopBuilder : Barbershop.Builder {
       }
     }
 
+    maybeThrowBarberException(errors = errors, warnings = warnings)
+
     // Check for unused DocumentData variable not used in any installed DocumentTemplate field
     installedCompiledDocumentTemplates.rowMap()
         .forEach { (documentDataClass, compiledDocumentTemplates) ->
-          val codes = compiledDocumentTemplates.reducedFieldCodeSet()
+          val codes = compiledDocumentTemplates.mapValues { (_, compiledDocumentTemplate) ->
+            compiledDocumentTemplate.reducedFieldCodeSet()
+          }.reduceToValuesSet()
 
           val documentDataConstructor = documentDataClass.primaryConstructor
           if (documentDataConstructor == null) {
@@ -304,12 +279,16 @@ class BarbershopBuilder : Barbershop.Builder {
           }
         }
 
-    throwBarberException(errors = errors, warnings = warnings)
+    maybeThrowBarberException(errors = errors, warnings = warnings)
 
     return installedCompiledDocumentTemplates
   }
 
-  private fun throwBarberException(errors: List<String>, warnings: List<String>) {
+  /**
+   * Throwing early makes debugging simpler for Barber developers as the above simple warnings
+   * can be raised before a flood of other errors below fail as a result of the above
+   */
+  private fun maybeThrowBarberException(errors: List<String>, warnings: List<String>) {
     if (errors.isNotEmpty() || (warnings.isNotEmpty() && warningsAsErrors)) {
       throw BarberException(errors = errors, warnings = warnings)
     }
@@ -323,7 +302,8 @@ class BarbershopBuilder : Barbershop.Builder {
       documentTemplate.targets.forEach { documentClass ->
         val documentTemplatesBySource = row(documentTemplate.source)
         barbers[BarberKey(documentDataClass, documentClass)] = RealBarber(
-            documentConstructor = documentClass.primaryConstructor!!,
+            document = documentClass,
+            installedDocuments = installedDocuments,
             compiledDocumentTemplateLocales = documentTemplatesBySource.mapValues { it.value },
             localeResolver = localeResolver
         )

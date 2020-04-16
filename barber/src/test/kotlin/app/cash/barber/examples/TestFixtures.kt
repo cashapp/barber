@@ -35,7 +35,7 @@ val investmentPurchaseShadowEncodingDocumentTemplateEN_US = DocumentTemplate(
         "non_shadow_field" to "You purchased {{ shares }} shares of {{ ticker }}."
     ),
     source = InvestmentPurchase::class,
-    targets = setOf(EncodingTestDocument::class, ShadowEncodingTestDocument::class),
+    targets = setOf(EncodingTestDocument::class, ShadowEncodingEverythingPlaintextTestDocument::class),
     locale = EN_US
 )
 

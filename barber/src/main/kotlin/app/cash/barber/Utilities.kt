@@ -1,29 +1,7 @@
 package app.cash.barber
 
-import app.cash.barber.models.CompiledDocumentTemplate
-import app.cash.barber.models.Locale
 import com.github.mustachejava.Mustache
 import kotlin.reflect.KFunction
-
-internal fun Map<String, Mustache?>.asFieldCodesMap() =
-    mapValues { (_, template: Mustache?) ->
-      template?.codes?.mapNotNull { it.name }?.toSet() ?: setOf()
-    }
-
-internal fun Map<*, Set<String>>.reduceSet(): Set<String> =
-    if (values.isNotEmpty()) {
-      values.reduce { acc, codes -> acc + codes }
-    } else {
-      setOf()
-    }
-
-internal fun Map<String, Mustache?>.reducedFieldCodes() =
-    asFieldCodesMap().reduceSet()
-
-internal fun MutableMap<Locale, CompiledDocumentTemplate>.reducedFieldCodeSet() =
-    mapValues { (_, documentTemplate) ->
-      documentTemplate.fields.reducedFieldCodes()
-    }.reduceSet()
 
 internal fun KFunction<*>.asParameterNames() = parameters.associateBy { it.name }
 

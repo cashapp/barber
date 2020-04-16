@@ -1,13 +1,12 @@
 package app.cash.barber.models
 
 import app.cash.barber.BarberMustacheFactoryProvider
-import app.cash.barber.asParameterNames
 import com.github.mustachejava.Mustache
 import com.google.common.collect.HashBasedTable
+import com.google.common.collect.Table
 import java.io.StringReader
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
-import kotlin.reflect.full.primaryConstructor
 
 /**
  * For each DocumentData we have a DocumentTemplate that provides a natural language for the document.
@@ -39,39 +38,22 @@ data class DocumentTemplate(
 
   fun compile(
     mustacheFactoryProvider: BarberMustacheFactoryProvider,
-    installedDocuments: HashBasedTable<String, KClass<out Document>, KParameter>
+    installedDocuments: Table<String, KClass<out Document>, KParameter>
   ): CompiledDocumentTemplate {
     // Pre-compile Mustache templates
-    val documentTemplateFields: MutableMap<String, Mustache?> =
-        fields.mapValues { (fieldKey, fieldValue) ->
-          // Render using a MustacheFactory that will respect any field BarberFieldEncoding annotations
-          val barberField = installedDocuments.row(fieldKey)
-              .values
-              .firstOrNull()
-              ?.annotations
-              ?.find { it is BarberField } as BarberField?
-          mustacheFactoryProvider.get(barberField?.encoding)
-              .compile(StringReader(fieldValue), fieldValue)
-        }.toMutableMap()
-
-    // Find missing fields in DocumentTemplate
-    // Missing fields occur when a nullable field in Document is not an included key in the DocumentTemplate fields
-    // In the Parameters Map in the Document constructor though, all parameter keys must be present (including
-    // nullable)
-    val combinedDocumentParameterNames = targets.map { target ->
-      target.primaryConstructor!!.asParameterNames()
-    }.map {
-      it.entries
-    }.reduce { acc, entries ->
-      acc + entries
-    }.filter {
-      it.value.type.isMarkedNullable
-    }.mapNotNull {
-      it.key
-    }.toSet()
-
-    // Initialize keys for missing nullable fields in DocumentTemplate
-    combinedDocumentParameterNames.mapNotNull { documentTemplateFields.putIfAbsent(it, null) }
+    val documentTemplateFields =
+        HashBasedTable.create<String, KClass<out Document>, Mustache?>()
+    fields.mapValues { (fieldName, fieldValue) ->
+      installedDocuments.row(fieldName).keys.forEach { document ->
+        // Render using a MustacheFactory that will respect any field BarberFieldEncoding annotations
+        val barberField = installedDocuments.get(fieldName, document)
+            .annotations
+            .firstOrNull { it is BarberField } as BarberField?
+        val mustache = mustacheFactoryProvider.get(barberField?.encoding)
+            .compile(StringReader(fieldValue), fieldValue)
+        documentTemplateFields.put(fieldName, document, mustache)
+      }
+    }
 
     return CompiledDocumentTemplate(
         fields = documentTemplateFields,
