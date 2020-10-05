@@ -27,3 +27,15 @@ afterEvaluate { project ->
     outputFormat = 'gfm'
   }
 }
+
+sourceSets {
+  main.kotlin {
+    srcDirs += "$buildDir/generated/source/wire/"
+  }
+}
+
+wire {
+  kotlin {
+    javaInterop = true
+  }
+}

@@ -9,4 +9,6 @@ import app.cash.barber.models.Locale
  */
 interface Barber<DD : DocumentData, D : Document> {
   fun render(documentData: DD, locale: Locale): D
+
+  fun render(context: Map<*, *>, locale: Locale): D
 }

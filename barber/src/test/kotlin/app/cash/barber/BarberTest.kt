@@ -16,6 +16,7 @@ import app.cash.barber.models.DocumentTemplate
 import app.cash.barber.models.Locale.Companion.EN_CA
 import app.cash.barber.models.Locale.Companion.EN_GB
 import app.cash.barber.models.Locale.Companion.EN_US
+import java.time.Instant
 import kotlin.test.assertEquals
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Disabled
@@ -34,6 +35,28 @@ class BarberTest {
 
     val spec = barber.getBarber<RecipientReceipt, TransactionalSmsDocument>()
         .render(sandy50Receipt, EN_US)
+
+    assertThat(spec).isEqualTo(
+        TransactionalSmsDocument(
+            sms_body = "Sandy Winchester sent you \$50. It will be available at 2019-05-21T16:02:00Z. Cancel here: https://cash.app/cancel/123"
+        )
+    )
+  }
+
+  @Test
+  fun `Render an SMS from context map`() {
+    val barber = BarbershopBuilder()
+        .installDocument<TransactionalSmsDocument>()
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
+        .build()
+
+    val spec = barber.getBarber<RecipientReceipt, TransactionalSmsDocument>()
+        .render(mapOf(
+            "sender" to "Sandy Winchester",
+            "amount" to "$50",
+            "cancelUrl" to "https://cash.app/cancel/123",
+            "deposit_expected_at" to Instant.parse("2019-05-21T16:02:00.00Z")
+        ), EN_US)
 
     assertThat(spec).isEqualTo(
         TransactionalSmsDocument(
