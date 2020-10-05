@@ -1,0 +1,54 @@
+syntax = "proto2";
+package app.cash.barber.api;
+
+option java_package = "app.cash.protos.barber.api";
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+/* Provides the necessary context to render a template matching template_token */
+message BarberDocumentData {
+  /* A representation of a field that supports a dynamic value type */
+  message Field {
+    /* Context variable name that is used in templates */
+    optional string name = 1;
+    /* Context variable in a supported type (string, integer, duration, instant) */
+    oneof value {
+      string string = 2;
+      int64 integer = 3;
+      google.protobuf.Duration duration = 4;
+      google.protobuf.Timestamp instant = 5;
+      // TODO add amount to support Money
+    }
+  }
+
+  /*
+   * A unique identifier for the corresponding DocumentTemplate that this DocumentData provides
+   * necessary context to render
+   */
+  optional string template_token = 1;
+  /* The context values required to render a DocumentTemplate of the given template_token */
+  repeated Field fields = 2;
+}
+
+/* Contains the templates for a given locale to render target Documents */
+message BarberDocumentTemplate {
+  /* A template field within a DocumentTemplate */
+  message Field {
+    /* Field name matches one of the fields of the target Document */
+    optional string name = 1;
+    /* A Mustache compatible template string with values filled in by DocumentData */
+    optional string template = 2;
+  }
+
+  /* A unique identifier used for lookup */
+  optional string template_token = 1;
+  /* An auto-incrementing integer to identify a unique version of the same DocumentTemplate */
+  optional int64 version = 2;
+  /* RFC 5646 locale language-region that the DocumentTemplate targets */
+  optional string locale = 3;
+  /* Fields that correspond to all fields of target Documents */
+  repeated Field fields = 4;
+  /* Document Tokens for the Documents that this DocumentTemplate can render */
+  repeated string target_documents = 5;
+}
