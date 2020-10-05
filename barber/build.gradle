@@ -14,6 +14,8 @@ dependencies {
   implementation dep.moshiKotlin
   implementation dep.okio
   implementation dep.mustacheCompiler
+  implementation dep.wireMoshiAdapter
+  implementation dep.wireRuntime
 
   testImplementation dep.assertj
   testImplementation dep.junitApi
