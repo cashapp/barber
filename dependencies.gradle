@@ -26,5 +26,8 @@ ext.dep = [
   "shadowJarPlugin": "com.github.jengelman.gradle.plugins:shadow:5.1.0",
   "spotlessPlugin": "com.diffplug.spotless:spotless-plugin-gradle:3.25.0",
   "tracingJaeger": "com.uber.jaeger:jaeger-core:0.27.0",
+  "wireGradlePlugin": "com.squareup.wire:wire-gradle-plugin:3.4.0",
+  "wireMoshiAdapter": "com.squareup.wire:wire-moshi-adapter:3.4.0",
+  "wireRuntime": "com.squareup.wire:wire-runtime:3.4.0",
 ]
 // Auto-generated from polyrepo's master-dependencies.json. Update via polyrepo dep-add and polyrepo dep-upgrade.

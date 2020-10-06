@@ -13,6 +13,7 @@ buildscript {
     classpath dep.kotlinGradlePlugin
     classpath dep.spotlessPlugin
     classpath dep.mavenPublishGradlePlugin
+    classpath dep.wireGradlePlugin
   }
 }
 
@@ -26,6 +27,7 @@ subprojects { subProject ->
   apply plugin: 'kotlin'
   apply plugin: 'org.jetbrains.dokka'
   apply plugin: 'com.diffplug.gradle.spotless'
+  apply plugin: 'com.squareup.wire'
 
   compileKotlin {
     kotlinOptions {
@@ -42,6 +44,20 @@ subprojects { subProject ->
   compileJava {
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
+  }
+
+  sourceSets {
+    main.resources.srcDirs += "src/main/proto/"
+
+    main.kotlin {
+      srcDirs += "$buildDir/generated/source/wire/"
+    }
+  }
+
+  wire {
+    kotlin {
+      javaInterop = true
+    }
   }
 
   repositories {
