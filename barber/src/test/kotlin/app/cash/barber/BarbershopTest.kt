@@ -23,7 +23,7 @@ class BarbershopTest {
         .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
         .build()
     val barber = barbershop.getBarber<RecipientReceipt, TransactionalSmsDocument>()
-    assertEquals("class app.cash.barber.RealBarber", barber::class.toString())
+    assertEquals("app.cash.barber.RealBarber", barber::class.qualifiedName)
   }
 
   @Test
@@ -36,8 +36,7 @@ class BarbershopTest {
         .build()
     val barbers = barbershop.getAllBarbers()
     assertEquals(1, barbers.size)
-    assertThat(barbers.keys).contains(
-        BarberKey(RecipientReceipt::class, TransactionalSmsDocument::class))
+    assertThat(barbers.keys).contains(BarberKey(RecipientReceipt::class, TransactionalSmsDocument::class))
   }
 
   @Test
@@ -55,10 +54,10 @@ class BarbershopTest {
     assertEquals(
         """
         |Errors
-        |1) Failed to get Barber<class app.cash.barber.examples.RecipientReceipt, class app.cash.barber.examples.TransactionalEmailDocument>
+        |1) Failed to get Barber<app.cash.barber.examples.TransactionalEmailDocument>(templateToken=recipientReceipt)
         |Requested Document [class app.cash.barber.examples.TransactionalEmailDocument] is installed
-        |Requested DocumentData [class app.cash.barber.examples.RecipientReceipt] is installed
-        |DocumentTemplate with source=[class app.cash.barber.examples.RecipientReceipt] does not have target=[class app.cash.barber.examples.TransactionalEmailDocument]
+        |Requested DocumentData [templateToken=recipientReceipt] is installed
+        |DocumentTemplate with [templateToken=recipientReceipt] does not have target=[app.cash.barber.examples.TransactionalEmailDocument]
         |
       """.trimMargin(),
         exception.toString())
@@ -77,7 +76,7 @@ class BarbershopTest {
     assertEquals(
         """
         |Errors
-        |1) Failed to get Barber<class app.cash.barber.examples.RecipientReceipt, class app.cash.barber.examples.TransactionalEmailDocument>
+        |1) Failed to get Barber<app.cash.barber.examples.TransactionalEmailDocument>(templateToken=recipientReceipt)
         |Document [class app.cash.barber.examples.TransactionalEmailDocument] is not installed in Barbershop
         |
       """.trimMargin(),

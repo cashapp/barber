@@ -2,6 +2,7 @@ package app.cash.barber
 
 import app.cash.barber.examples.EncodingTestDocument
 import app.cash.barber.examples.InvestmentPurchase
+import app.cash.barber.examples.NestedLoginCode
 import app.cash.barber.examples.RecipientReceipt
 import app.cash.barber.examples.TransactionalEmailDocument
 import app.cash.barber.examples.TransactionalSmsDocument
@@ -11,11 +12,12 @@ import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_CA
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_GB
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_US
 import app.cash.barber.examples.sandy50Receipt
-import app.cash.barber.models.DocumentData
+import app.cash.barber.models.BarberSignature
 import app.cash.barber.models.DocumentTemplate
 import app.cash.barber.models.Locale.Companion.EN_CA
 import app.cash.barber.models.Locale.Companion.EN_GB
 import app.cash.barber.models.Locale.Companion.EN_US
+import app.cash.barber.models.Locale.Companion.ES_US
 import kotlin.test.assertEquals
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Disabled
@@ -103,21 +105,9 @@ class BarberTest {
 
   @Test
   fun `Render an email and sms with nested data`() {
-    data class EmailButton(
-      val color: String,
-      val text: String,
-      val link: String,
-      val size: String
-    )
-
-    data class NestedLoginCode(
-      val code: String,
-      val button: EmailButton
-    ) : DocumentData
-
     val nestedLoginCode = NestedLoginCode(
         code = "123-456",
-        button = EmailButton(
+        button = NestedLoginCode.EmailButton(
             color = "#B3B3B3",
             text = "Login",
             link = "https://cash.app/login",
@@ -230,6 +220,126 @@ class BarberTest {
             plaintext_field = "You purchased 100 shares of McDonald's."
         )
     )
+  }
+
+  @Test
+  fun `Can install and render multiple versions`() {
+    val key = recipientReceiptSmsDocumentTemplateEN_US.fields.keys.first()
+    val field = recipientReceiptSmsDocumentTemplateEN_US.fields.values.first()
+    val v1 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "$field v1"), version = 1)
+    val v2 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "$field v2"), version = 2)
+    val v3 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "$field v3"), version = 3)
+
+    val barbershop = BarbershopBuilder()
+        .installDocument<TransactionalSmsDocument>()
+        .installDocumentTemplate<RecipientReceipt>(v1)
+        .installDocumentTemplate<RecipientReceipt>(v2)
+        .installDocumentTemplate<RecipientReceipt>(v3)
+        .build()
+
+    val recipientReceiptSms = barbershop.getBarber<RecipientReceipt, TransactionalSmsDocument>()
+
+    val specV1 = recipientReceiptSms.render(sandy50Receipt, EN_US, 1)
+    assertEquals(
+        "Sandy Winchester sent you \$50. It will be available at 2019-05-21T16:02:00Z. Cancel here: https://cash.app/cancel/123 v1",
+        specV1.sms_body)
+    val specV2 = recipientReceiptSms.render(sandy50Receipt, EN_US, 2)
+    assertEquals(
+        "Sandy Winchester sent you \$50. It will be available at 2019-05-21T16:02:00Z. Cancel here: https://cash.app/cancel/123 v2",
+        specV2.sms_body)
+    val specV3 = recipientReceiptSms.render(sandy50Receipt, EN_US, 3)
+    assertEquals(
+        "Sandy Winchester sent you \$50. It will be available at 2019-05-21T16:02:00Z. Cancel here: https://cash.app/cancel/123 v3",
+        specV3.sms_body)
+  }
+
+  @Test
+  fun `Can install multiple versions and only render compatible`() {
+    val key = recipientReceiptSmsDocumentTemplateEN_US.fields.keys.first()
+    val field = recipientReceiptSmsDocumentTemplateEN_US.fields.values.first()
+
+    val v1 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "New template with no fields v1"), version = 1)
+        .toProto()
+        .copy(source_signature = "")
+
+    val v2 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "$field v2"), version = 2)
+
+    val v3sourceSignature = BarberSignature(BarberSignature(v2.toProto().source_signature!!).fields + mapOf("new_variable_not_supported_yet" to app.cash.protos.barber.api.BarberSignature.Type.STRING))
+    val v3 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "$field {{ new_variable_not_supported_yet }} v3"), version = 3)
+        .toProto()
+        .copy(source_signature = v3sourceSignature.signature)
+
+    val barbershop = BarbershopBuilder()
+        .installDocument<TransactionalSmsDocument>()
+        .installDocumentTemplate(v1)
+        .installDocumentTemplate(v2.toProto())
+        .installDocumentTemplate(v3)
+        .build()
+
+    val recipientReceiptSms = barbershop.getBarber<RecipientReceipt, TransactionalSmsDocument>()
+
+    val specV1 = recipientReceiptSms.render(sandy50Receipt, EN_US, 1)
+    assertEquals(
+        "New template with no fields v1",
+        specV1.sms_body)
+    val specV2 = recipientReceiptSms.render(sandy50Receipt, EN_US, 2)
+    assertEquals(
+        "Sandy Winchester sent you \$50. It will be available at 2019-05-21T16:02:00Z. Cancel here: https://cash.app/cancel/123 v2",
+        specV2.sms_body)
+    val specV3 = recipientReceiptSms.render(sandy50Receipt, EN_US, 3)
+    assertEquals(
+        "Sandy Winchester sent you \$50. It will be available at 2019-05-21T16:02:00Z. Cancel here: https://cash.app/cancel/123 v2",
+        specV3.sms_body)
+    val specMaxCompatible = recipientReceiptSms.render(sandy50Receipt, EN_US)
+    assertEquals(
+        "Sandy Winchester sent you \$50. It will be available at 2019-05-21T16:02:00Z. Cancel here: https://cash.app/cancel/123 v2",
+        specMaxCompatible.sms_body)
+  }
+
+  @Test
+  fun `Can install multiple versions and only render compatible with locale fallback`() {
+    val key = recipientReceiptSmsDocumentTemplateEN_US.fields.keys.first()
+    val field = recipientReceiptSmsDocumentTemplateEN_US.fields.values.first()
+
+    val v1 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "New template with no fields v1"), version = 1)
+        .toProto()
+        .copy(source_signature = "")
+
+    val v2 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "$field v2"), version = 2)
+
+    val v3sourceSignature = BarberSignature(BarberSignature(v2.toProto().source_signature!!).fields + mapOf("new_variable_not_supported_yet" to app.cash.protos.barber.api.BarberSignature.Type.STRING))
+    val v3 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "$field {{ new_variable_not_supported_yet }} v3"), version = 3)
+        .toProto()
+        .copy(
+            source_signature = v3sourceSignature.signature,
+            locale = ES_US.locale
+        )
+
+    val barbershop = BarbershopBuilder()
+        .installDocument<TransactionalSmsDocument>()
+        .installDocumentTemplate(v1)
+        .installDocumentTemplate(v2.toProto())
+        .installDocumentTemplate(v3)
+        .build()
+
+    val recipientReceiptSms = barbershop.getBarber<RecipientReceipt, TransactionalSmsDocument>()
+
+    val specV1 = recipientReceiptSms.render(sandy50Receipt, ES_US, 1)
+    assertEquals(
+        "New template with no fields v1",
+        specV1.sms_body)
+    val specV2 = recipientReceiptSms.render(sandy50Receipt, ES_US, 2)
+    assertEquals(
+        "Sandy Winchester sent you \$50. It will be available at 2019-05-21T16:02:00Z. Cancel here: https://cash.app/cancel/123 v2",
+        specV2.sms_body)
+    val specV3 = recipientReceiptSms.render(sandy50Receipt, ES_US, 3)
+    assertEquals(
+        "Sandy Winchester sent you \$50. It will be available at 2019-05-21T16:02:00Z. Cancel here: https://cash.app/cancel/123 v2",
+        specV3.sms_body)
+    val specMaxCompatible = recipientReceiptSms.render(sandy50Receipt, ES_US)
+    assertEquals(
+        "Sandy Winchester sent you \$50. It will be available at 2019-05-21T16:02:00Z. Cancel here: https://cash.app/cancel/123 v2",
+        specMaxCompatible.sms_body)
   }
 
   @Disabled @Test

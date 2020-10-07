@@ -46,8 +46,8 @@ class WarningsAsErrorsTest {
         """
           |Errors
           |1) Attempted to install DocumentTemplate without the corresponding Document being installed.
-          |Not installed DocumentTemplate.targets:
-          |[class app.cash.barber.examples.TransactionalSmsDocument]
+          |Not installed DocumentTemplate.target_signatures:
+          |[BarberSignature(signature=sms_body,1, fields={sms_body=STRING})]
           |
           |Warnings
           |1) No Documents installed

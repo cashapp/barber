@@ -53,4 +53,16 @@ class BarberException(
   private fun List<String>.sanitize(): String = map { it.replace("$", "::") }
     .mapIndexed { index, s -> "${index + 1}) $s\n" }
     .joinToString("\n")
+
+  companion object {
+    /**
+     * Throwing early makes debugging simpler for Barber developers as the above simple warnings
+     * can be raised before a flood of other errors below fail as a result of the above
+     */
+    fun maybeThrowBarberException(errors: List<String>, warnings: List<String>, warningsAsErrors: Boolean) {
+      if (errors.isNotEmpty() || (warnings.isNotEmpty() && warningsAsErrors)) {
+        throw BarberException(errors = errors, warnings = warnings)
+      }
+    }
+  }
 }

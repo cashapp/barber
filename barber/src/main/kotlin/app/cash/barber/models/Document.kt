@@ -1,5 +1,7 @@
 package app.cash.barber.models
 
+import kotlin.reflect.KClass
+
 /**
  * This is a UI object that has the user-presented strings of a document.
  *
