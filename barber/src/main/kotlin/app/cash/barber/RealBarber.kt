@@ -17,7 +17,11 @@ internal class RealBarber<D : Document>(
   private val compiledDocumentTemplateLocaleVersions: Map<Locale, Table<BarberSignature, Long, BarbershopBuilder.DocumentTemplateDb>>,
   private val localeResolver: LocaleResolver
 ) : Barber<D> {
-  override fun <DD : app.cash.barber.models.DocumentData> render(documentData: DD, locale: Locale, version: Long): D =
+  override fun <DD : app.cash.barber.models.DocumentData> render(
+    documentData: DD,
+    locale: Locale,
+    version: Long
+  ): D =
       render(documentData.toProto(), locale, version)
 
   override fun render(
@@ -37,32 +41,27 @@ internal class RealBarber<D : Document>(
     val documentDataSignature = documentData.getBarberSignature()
 
     // Only allow locale lookup on installed versions that can be satisfied by the provided DocumentData
-    val compatibleLocaleVersions = compiledDocumentTemplateLocaleVersions.mapValues { (_, versionRecords) ->
-      val validVersions = mutableMapOf<Long, BarbershopBuilder.DocumentTemplateDb>()
-      versionRecords.cellSet().map { cell ->
-        if (documentDataSignature.canSatisfy(cell.rowKey!!)) {
-          validVersions[cell.columnKey!!] = cell.value!!
-        }
-      }
-      if (validVersions.isEmpty()) {
-        null
-      } else {
-        validVersions
-      }
-    }.toMap().filterValues { it != null }
+    val compatibleLocaleVersions =
+        compiledDocumentTemplateLocaleVersions.mapValues { (_, versionRecords) ->
+          val validVersions = mutableMapOf<Long, BarbershopBuilder.DocumentTemplateDb>()
+          versionRecords.cellSet().map { cell ->
+            if (documentDataSignature.canSatisfy(cell.rowKey!!)) {
+              validVersions[cell.columnKey!!] = cell.value!!
+            }
+          }
+          if (validVersions.isEmpty()) {
+            null
+          } else {
+            validVersions
+          }
+        }.toMap().filterValues { it != null }
 
     // Choose a Locale based on available installed versions
     val versionsForLocale = localeResolver.resolve(locale, compatibleLocaleVersions)
 
     // Resolve exact version or latest compatible based on DocumentData BarberSignature
     val documentTemplateDB = versionsForLocale[version]
-    // TODO (adrw) confirm this chooses highest possible version
-        ?: let {
-          val sortedVersionMap = versionsForLocale.toSortedMap()
-          val maxVersion = sortedVersionMap.entries.last()
-          maxVersion.value
-        }
-
+        ?: versionsForLocale.toSortedMap().entries.last().value
 
     val compiledDocumentTemplate = documentTemplateDB?.compiledDocumentTemplate
         ?: throw BarberException(errors = listOf("""
@@ -79,26 +78,27 @@ internal class RealBarber<D : Document>(
             }
 
     // Zips the KParameters with corresponding rendered values from DocumentTemplate
-    val parameters = installedDocuments.row(document.getBarberSignature()).map { (fieldName, documentDB) ->
-      documentDB.kParameter to when {
-        renderedDocumentTemplateFields.containsKey(fieldName) -> {
-          renderedDocumentTemplateFields.getValue(fieldName)
-        }
-        // Initialize any nullable not included fields as null
-        documentDB.kParameter.type.isMarkedNullable -> {
-          null
-        }
-        // This case should never be hit because it is covered in BarbershopBuilder validation
-        else -> {
-          throw BarberException(errors = listOf("""
+    val parameters =
+        installedDocuments.row(document.getBarberSignature()).map { (fieldName, documentDB) ->
+          documentDB.kParameter to when {
+            renderedDocumentTemplateFields.containsKey(fieldName) -> {
+              renderedDocumentTemplateFields.getValue(fieldName)
+            }
+            // Initialize any nullable not included fields as null
+            documentDB.kParameter.type.isMarkedNullable -> {
+              null
+            }
+            // This case should never be hit because it is covered in BarbershopBuilder validation
+            else -> {
+              throw BarberException(errors = listOf("""
             |RealBarber unable to render 
             |DocumentData: $documentData
             |DocumentTemplate: $compiledDocumentTemplate
             |Document: $document
             |""".trimMargin()))
-        }
-      }
-    }.toMap()
+            }
+          }
+        }.toMap()
 
     // Build the Document instance with the rendered DocumentTemplate parameters
     return document.primaryConstructor!!.callBy(parameters)

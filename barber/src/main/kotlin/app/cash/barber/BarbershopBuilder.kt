@@ -28,8 +28,15 @@ class BarbershopBuilder : Barbershop.Builder {
     val compiledDocumentTemplate: CompiledDocumentTemplate?
   )
 
-  private val installedDocumentTemplates =
-      HashBasedTable.create<TemplateToken, Locale, Table<BarberSignature, Long, DocumentTemplateDb>>()
+  internal data class DocumentTemplateKey(
+    val templateToken: TemplateToken,
+    val locale: Locale,
+    val sourceBarberSignature: BarberSignature,
+    val version: Long
+  )
+
+  private val installedDocumentTemplates: MutableMap<DocumentTemplateKey, DocumentTemplateDb> =
+      mutableMapOf()
 
   internal data class DocumentDb(
     val kParameter: KParameter,
@@ -64,16 +71,16 @@ class BarbershopBuilder : Barbershop.Builder {
     val version = documentTemplate.version!!
     val locale = Locale(documentTemplate.locale!!)
 
-    val versions = installedDocumentTemplates.get(templateToken, locale)
-        ?: HashBasedTable.create()
-    if (!versions.isEmpty) {
-      val alreadyInstalledVersion = versions.get(signature, version)
+    val versions = installedDocumentTemplates.filter { (it,_) -> templateToken == it.templateToken && locale == it.locale }
+    if (versions.isNotEmpty()) {
+      val alreadyInstalledVersion = versions
+          .filter { (it, _) -> signature == it.sourceBarberSignature && version == it.version }
+          .entries
+          .firstOrNull()
       if (alreadyInstalledVersion != null) {
-        val localeVersions = installedDocumentTemplates.row(templateToken)
-        val installedLocales = localeVersions.keys.joinToString("\n")
-        val installedVersions = localeVersions.values.fold(setOf<Long>()) { acc, versionRecords ->
-          acc + versionRecords.columnKeySet()
-        }
+        val localeVersions = installedDocumentTemplates.filter { (it,_) -> templateToken == it.templateToken }
+        val installedLocales = localeVersions.keys.map { it.locale }.joinToString("\n")
+        val installedVersions = localeVersions.keys.map { it.version }
         throw BarberException(errors = listOf("""
             |Attempted to install DocumentTemplate that will overwrite an already installed locale version
             |${documentTemplate.getKey()}
@@ -85,12 +92,18 @@ class BarbershopBuilder : Barbershop.Builder {
             """.trimMargin()))
       }
     }
-    versions.put(signature, version, DocumentTemplateDb(documentTemplate, null))
-    installedDocumentTemplates.put(templateToken, locale, versions)
+    installedDocumentTemplates[DocumentTemplateKey(
+        templateToken = templateToken,
+        locale = locale,
+        sourceBarberSignature = signature,
+        version = version
+    )] = DocumentTemplateDb(documentTemplate = documentTemplate, compiledDocumentTemplate = null)
   }
 
-  inline fun <reified DD : app.cash.barber.models.DocumentData> installDocumentTemplate(documentTemplate: app.cash.barber.models.DocumentTemplate) =
-     installDocumentTemplate(DD::class, documentTemplate)
+  inline fun <reified DD : app.cash.barber.models.DocumentData> installDocumentTemplate(
+    documentTemplate: app.cash.barber.models.DocumentTemplate
+  ) =
+      installDocumentTemplate(DD::class, documentTemplate)
 
   override fun installDocument(document: KClass<out Document>) = apply {
     val documentConstructor = document.primaryConstructor
@@ -127,11 +140,11 @@ class BarbershopBuilder : Barbershop.Builder {
    * Validates BarbershopBuilder inputs and returns a Barbershop instance with the installed and
    * validated elements.
    */
-  private fun Table<TemplateToken, Locale, Table<BarberSignature, Long, DocumentTemplateDb>>.validateAndCompile(): Table<TemplateToken, Locale, Table<BarberSignature, Long, DocumentTemplateDb>> {
+  private fun Map<DocumentTemplateKey, DocumentTemplateDb>.validateAndCompile(): Map<DocumentTemplateKey, DocumentTemplateDb> {
     val errors: MutableList<String> = mutableListOf()
 
     // Warn if Barber elements are not installed
-    if (cellSet().isEmpty()) {
+    if (isEmpty()) {
       warnings.add("""
         |No DocumentData or DocumentTemplates installed
       """.trimMargin())
@@ -144,26 +157,20 @@ class BarbershopBuilder : Barbershop.Builder {
     }
 
     // Warn if Documents are unused in DocumentTemplates
-    if (!installedDocumentsIsEmpty && cellSet().isNotEmpty()) {
-      val usedDocumentSignatures = cellSet()
-          .map { dt ->
-            val versions = dt.value!!
-            versions.cellSet().map { v ->
-              v.value?.documentTemplate?.target_signatures?.toSet() ?: setOf()
-            }.reduce { acc, targets -> acc + targets }.toSet()
-          }
-          .reduce { acc, targets ->
-            acc + targets
-          }.toSet()
+    if (!installedDocumentsIsEmpty && isNotEmpty()) {
+      val usedDocumentSignatures = map { (_, db) ->
+        db.documentTemplate.target_signatures
+      }.reduce { acc, list -> acc + list }.toSet()
       val installedDocumentSignatures = installedDocuments.rowKeySet().map { it.signature }.toSet()
       if (!usedDocumentSignatures.containsAll(installedDocumentSignatures)) {
         val danglingDocumentSignatures = installedDocumentSignatures.filterNot { signature ->
           usedDocumentSignatures.contains(signature)
         }.toSet()
         val danglingDocuments = danglingDocumentSignatures.map { signature ->
-            installedDocuments.row(BarberSignature(signature)).values.fold(setOf<String?>()) { acc, documentDB ->
-              acc + documentDB.document.qualifiedName
-            }
+          installedDocuments.row(BarberSignature(signature)).values.fold(
+              setOf<String?>()) { acc, documentDB ->
+            acc + documentDB.document.qualifiedName
+          }
         }.reduce { acc, set -> acc + set }.toSet()
         warnings.add("""
           |Document installed that is not used in any installed DocumentTemplates
@@ -172,50 +179,51 @@ class BarbershopBuilder : Barbershop.Builder {
       }
     }
 
-    BarberException.maybeThrowBarberException(errors = errors, warnings = warnings, warningsAsErrors = warningsAsErrors)
+    BarberException.maybeThrowBarberException(errors = errors, warnings = warnings,
+        warningsAsErrors = warningsAsErrors)
 
     // Compile DocumentTemplates and perform initial validation
-    cellSet().forEach { cell ->
-      val templateToken = cell.rowKey!!
-      val locale = cell.columnKey!!
-      val versions = cell.value!!
+    forEach { (key, db) ->
+      // Compile templates according to the MustacheFactory matching to the Document field encoding
+      val compiledDocumentTemplate = db.documentTemplate
+          .compileAndValidate(
+              mustacheFactoryProvider = mustacheFactoryProvider,
+              installedDocuments = installedDocuments,
+              warnings = warnings,
+              warningsAsErrors = warningsAsErrors
+          )
 
-      versions.cellSet().forEach { versionRecord ->
-        val signature = versionRecord.rowKey!!
-        val version = versionRecord.columnKey!!
-        val barberDocumentTemplate = versionRecord.value?.documentTemplate!!
-
-        // Compile templates according to the MustacheFactory matching to the Document field encoding
-        val compiledDocumentTemplate = barberDocumentTemplate
-            .compileAndValidate(mustacheFactoryProvider, installedDocuments, warnings, warningsAsErrors)
-
-        versions.put(signature, version,
-            DocumentTemplateDb(barberDocumentTemplate, compiledDocumentTemplate))
-        installedDocumentTemplates.put(templateToken, locale, versions)
-      }
+      installedDocumentTemplates[key] = db.copy(compiledDocumentTemplate = compiledDocumentTemplate)
     }
 
-    BarberException.maybeThrowBarberException(errors = errors, warnings = warnings, warningsAsErrors = warningsAsErrors)
+    BarberException.maybeThrowBarberException(errors = errors, warnings = warnings,
+        warningsAsErrors = warningsAsErrors)
 
     return installedDocumentTemplates
   }
 
-  private fun Table<TemplateToken, Locale, Table<BarberSignature, Long, DocumentTemplateDb>>.asBarbershop(): Barbershop {
-    val barbers = rowMap().entries.fold(linkedMapOf<BarberKey, Barber<Document>>()) { barbers, (templateToken, localeVersionMap) ->
-      localeVersionMap.values.forEach { versions ->
-        val documentTemplateTargets = versions.cellSet().fold(setOf<KClass<out Document>>()) { acc, versionRecord ->
-          acc + versionRecord.value!!.compiledDocumentTemplate!!.targets
-        }
-        documentTemplateTargets.forEach { document ->
-          barbers[BarberKey(templateToken, document)] = RealBarber(
-              document = document,
-              installedDocuments = installedDocuments,
-              compiledDocumentTemplateLocaleVersions = localeVersionMap,
-              localeResolver = localeResolver
-          )
-        }
+  private fun Map<DocumentTemplateKey, DocumentTemplateDb>.asBarbershop(): Barbershop {
+    val barbers = linkedMapOf<BarberKey, Barber<Document>>()
+    keys.map { it.templateToken }.toSet().map { templateToken ->
+      val versions = filter { (it, _) -> templateToken == it.templateToken }
+      val documentTargets = versions.values
+          .map { it.compiledDocumentTemplate?.targets ?: setOf() }
+          .reduce { acc, set -> acc + set }
+          .toSet()
+      val localeVersionsMap = versions.entries.fold(mapOf<Locale, Table<BarberSignature, Long, DocumentTemplateDb>>()) { acc, (key, db) ->
+        val (_, locale, sourceBarberSignature, version) = key
+        val localeVersions = acc[locale] ?: HashBasedTable.create()
+          localeVersions.put(sourceBarberSignature, version, db)
+        acc + mapOf(locale to localeVersions)
       }
-      barbers
+      documentTargets.forEach { document ->
+        barbers[BarberKey(templateToken, document)] = RealBarber(
+            document = document,
+            installedDocuments = installedDocuments,
+            compiledDocumentTemplateLocaleVersions = localeVersionsMap,
+            localeResolver = localeResolver
+        )
+      }
     }
     return RealBarbershop(barbers = barbers, warnings = warnings)
   }
