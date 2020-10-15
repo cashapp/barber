@@ -12,7 +12,6 @@ import app.cash.barber.models.Locale
 import app.cash.barber.models.TemplateToken
 import app.cash.protos.barber.api.DocumentTemplate
 import com.google.common.collect.HashBasedTable
-import com.google.common.collect.Table
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
 import kotlin.reflect.full.primaryConstructor
@@ -28,14 +27,14 @@ class BarbershopBuilder : Barbershop.Builder {
     val compiledDocumentTemplate: CompiledDocumentTemplate?
   )
 
-  internal data class DocumentTemplateKey(
+  internal data class BuilderDocumentTemplateKey(
     val templateToken: TemplateToken,
     val locale: Locale,
     val sourceBarberSignature: BarberSignature,
     val version: Long
   )
 
-  private val installedDocumentTemplates: MutableMap<DocumentTemplateKey, DocumentTemplateDb> =
+  private val installedDocumentTemplates: MutableMap<BuilderDocumentTemplateKey, DocumentTemplateDb> =
       mutableMapOf()
 
   internal data class DocumentDb(
@@ -71,14 +70,16 @@ class BarbershopBuilder : Barbershop.Builder {
     val version = documentTemplate.version!!
     val locale = Locale(documentTemplate.locale!!)
 
-    val versions = installedDocumentTemplates.filter { (it,_) -> templateToken == it.templateToken && locale == it.locale }
+    val versions =
+        installedDocumentTemplates.filter { (it, _) -> templateToken == it.templateToken && locale == it.locale }
     if (versions.isNotEmpty()) {
       val alreadyInstalledVersion = versions
           .filter { (it, _) -> signature == it.sourceBarberSignature && version == it.version }
           .entries
           .firstOrNull()
       if (alreadyInstalledVersion != null) {
-        val localeVersions = installedDocumentTemplates.filter { (it,_) -> templateToken == it.templateToken }
+        val localeVersions =
+            installedDocumentTemplates.filter { (it, _) -> templateToken == it.templateToken }
         val installedLocales = localeVersions.keys.map { it.locale }.joinToString("\n")
         val installedVersions = localeVersions.keys.map { it.version }
         throw BarberException(errors = listOf("""
@@ -92,7 +93,7 @@ class BarbershopBuilder : Barbershop.Builder {
             """.trimMargin()))
       }
     }
-    installedDocumentTemplates[DocumentTemplateKey(
+    installedDocumentTemplates[BuilderDocumentTemplateKey(
         templateToken = templateToken,
         locale = locale,
         sourceBarberSignature = signature,
@@ -112,7 +113,7 @@ class BarbershopBuilder : Barbershop.Builder {
     } else if (documentConstructor.parameters.isEmpty()) {
       throw BarberException(errors = listOf("No fields included for Document [$document]"))
     }
-    documentConstructor.asParameterNames().forEach { (fieldName, kParameter) ->
+    documentConstructor.parameters.associateBy { it.name }.forEach { (fieldName, kParameter) ->
       fieldName?.let {
         installedDocuments.put(document.getBarberSignature(), fieldName,
             DocumentDb(kParameter, document))
@@ -140,7 +141,7 @@ class BarbershopBuilder : Barbershop.Builder {
    * Validates BarbershopBuilder inputs and returns a Barbershop instance with the installed and
    * validated elements.
    */
-  private fun Map<DocumentTemplateKey, DocumentTemplateDb>.validateAndCompile(): Map<DocumentTemplateKey, DocumentTemplateDb> {
+  private fun Map<BuilderDocumentTemplateKey, DocumentTemplateDb>.validateAndCompile(): Map<BuilderDocumentTemplateKey, DocumentTemplateDb> {
     val errors: MutableList<String> = mutableListOf()
 
     // Warn if Barber elements are not installed
@@ -202,7 +203,7 @@ class BarbershopBuilder : Barbershop.Builder {
     return installedDocumentTemplates
   }
 
-  private fun Map<DocumentTemplateKey, DocumentTemplateDb>.asBarbershop(): Barbershop {
+  private fun Map<BuilderDocumentTemplateKey, DocumentTemplateDb>.asBarbershop(): Barbershop {
     val barbers = linkedMapOf<BarberKey, Barber<Document>>()
     keys.map { it.templateToken }.toSet().map { templateToken ->
       val versions = filter { (it, _) -> templateToken == it.templateToken }
@@ -210,17 +211,20 @@ class BarbershopBuilder : Barbershop.Builder {
           .map { it.compiledDocumentTemplate?.targets ?: setOf() }
           .reduce { acc, set -> acc + set }
           .toSet()
-      val localeVersionsMap = versions.entries.fold(mapOf<Locale, Table<BarberSignature, Long, DocumentTemplateDb>>()) { acc, (key, db) ->
+      val localeVersionsMap = versions.entries.fold(
+          mapOf<RealBarber.DocumentTemplateKey, DocumentTemplateDb>()) { acc, (key, db) ->
         val (_, locale, sourceBarberSignature, version) = key
-        val localeVersions = acc[locale] ?: HashBasedTable.create()
-          localeVersions.put(sourceBarberSignature, version, db)
-        acc + mapOf(locale to localeVersions)
+        acc + mapOf(RealBarber.DocumentTemplateKey(
+            locale = locale,
+            sourceBarberSignature = sourceBarberSignature,
+            version = version
+        ) to db)
       }
       documentTargets.forEach { document ->
         barbers[BarberKey(templateToken, document)] = RealBarber(
             document = document,
             installedDocuments = installedDocuments,
-            compiledDocumentTemplateLocaleVersions = localeVersionsMap,
+            installedDocumentTemplates = localeVersionsMap,
             localeResolver = localeResolver
         )
       }

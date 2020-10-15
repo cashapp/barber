@@ -14,9 +14,15 @@ import kotlin.reflect.full.primaryConstructor
 internal class RealBarber<D : Document>(
   private val document: KClass<out D>,
   private val installedDocuments: Table<BarberSignature, String, BarbershopBuilder.DocumentDb>,
-  private val compiledDocumentTemplateLocaleVersions: Map<Locale, Table<BarberSignature, Long, BarbershopBuilder.DocumentTemplateDb>>,
+  private val installedDocumentTemplates: Map<DocumentTemplateKey, BarbershopBuilder.DocumentTemplateDb>,
   private val localeResolver: LocaleResolver
 ) : Barber<D> {
+  internal data class DocumentTemplateKey(
+    val locale: Locale,
+    val sourceBarberSignature: BarberSignature,
+    val version: Long
+  )
+
   override fun <DD : app.cash.barber.models.DocumentData> render(
     documentData: DD,
     locale: Locale,
@@ -42,27 +48,22 @@ internal class RealBarber<D : Document>(
 
     // Only allow locale lookup on installed versions that can be satisfied by the provided DocumentData
     val compatibleLocaleVersions =
-        compiledDocumentTemplateLocaleVersions.mapValues { (_, versionRecords) ->
-          val validVersions = mutableMapOf<Long, BarbershopBuilder.DocumentTemplateDb>()
-          versionRecords.cellSet().map { cell ->
-            if (documentDataSignature.canSatisfy(cell.rowKey!!)) {
-              validVersions[cell.columnKey!!] = cell.value!!
-            }
-          }
-          if (validVersions.isEmpty()) {
-            null
-          } else {
-            validVersions
-          }
-        }.toMap().filterValues { it != null }
+        installedDocumentTemplates.filter { (it, _) ->
+          documentDataSignature.canSatisfy(it.sourceBarberSignature)
+        }
 
     // Choose a Locale based on available installed versions
-    val versionsForLocale = localeResolver.resolve(locale, compatibleLocaleVersions)
+    val localeLookupMap = compatibleLocaleVersions
+        .entries
+        .fold(mapOf<Locale, Map<Long, BarbershopBuilder.DocumentTemplateDb>>()) { acc, (key, db) ->
+          val versionMap = acc[key.locale] ?: mapOf()
+          acc + mapOf(key.locale to versionMap + mapOf(key.version to db))
+        }
+    val versionsForLocale = localeResolver.resolve(locale, localeLookupMap)
 
     // Resolve exact version or latest compatible based on DocumentData BarberSignature
     val documentTemplateDB = versionsForLocale[version]
         ?: versionsForLocale.toSortedMap().entries.last().value
-
     val compiledDocumentTemplate = documentTemplateDB?.compiledDocumentTemplate
         ?: throw BarberException(errors = listOf("""
             |RealBarber unable to find a DocumentTemplate version that matches the input DocumentData signature 

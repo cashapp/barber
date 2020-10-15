@@ -3,7 +3,6 @@ package app.cash.barber.models
 import app.cash.barber.BarberException
 import app.cash.barber.BarberMustacheFactoryProvider
 import app.cash.barber.BarbershopBuilder
-import app.cash.barber.rootKey
 import app.cash.protos.barber.api.DocumentTemplate
 import com.github.mustachejava.Mustache
 import com.google.common.collect.HashBasedTable
@@ -159,7 +158,7 @@ data class CompiledDocumentTemplate(
       val codes = compiledDocumentTemplate.reducedFieldCodeSet()
       val signature = BarberSignature(source_signature)
       signature.fields.forEach { (fieldName, _) ->
-        if (!codes.map { it.rootKey() }.contains(fieldName)) {
+        if (!codes.map { it }.contains(fieldName)) {
           warnings.add("""
           |Unused DocumentData variable [$fieldName] in Source signature [$source_signature] with no
           |usage in ${this.getKey()} 
