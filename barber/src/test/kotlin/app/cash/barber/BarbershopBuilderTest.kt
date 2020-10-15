@@ -65,8 +65,8 @@ class BarbershopBuilderTest {
     assertEquals("""
       |Errors
       |1) Attempted to install DocumentTemplate without the corresponding Document being installed.
-      |Not installed DocumentTemplate.targets:
-      |[class app.cash.barber.examples.TransactionalSmsDocument]
+      |Not installed DocumentTemplate.target_signatures:
+      |[BarberSignature(signature=sms_body,1, fields={sms_body=STRING})]
       |
       """.trimMargin(),
         exception.toString())
@@ -82,9 +82,9 @@ class BarbershopBuilderTest {
     }
     assertEquals("""
       |Errors
-      |1) Attempted to install DocumentTemplate with a DocumentData not specified in the DocumentTemplate source.
-      |DocumentTemplate.source: class app.cash.barber.examples.RecipientReceipt
-      |DocumentData: class app.cash.barber.examples.SenderReceipt
+      |1) Attempted to install DocumentTemplate with a DocumentData not specified in the DocumentTemplate source
+      |DocumentTemplate.source: app.cash.barber.examples.RecipientReceipt
+      |DocumentData: app.cash.barber.examples.SenderReceipt
       |
       """.trimMargin(), exception.toString())
   }
@@ -117,8 +117,7 @@ class BarbershopBuilderTest {
     assertEquals("""
       |Warnings
       |1) Document installed that is not used in any installed DocumentTemplates
-      |[class app.cash.barber.examples.TransactionalEmailDocument]
-      |
+      |[app.cash.barber.examples.TransactionalEmailDocument]
       |
       """.trimMargin(), exception.toString())
   }
@@ -209,7 +208,7 @@ class BarbershopBuilderTest {
     assertEquals(
         """
         |Errors
-        |1) Missing variable [shares] in DocumentData [class app.cash.barber.BarbershopBuilderTest::Fails when variable in field template is not in source DocumentData::TradeReceipt] for DocumentTemplate field [You bought {{ shares }} shares of {{ ticker }}.]
+        |1) Missing variable [shares] for DocumentData with [templateToken=tradeReceipt] for DocumentTemplate field [Field{key=sms_body, template=You bought \{\{ shares \}\} shares of \{\{ ticker \}\}.}]
         |
       """.trimMargin(),
         exception.toString())
@@ -241,8 +240,8 @@ class BarbershopBuilderTest {
     assertEquals(
         """
         |Warnings
-        |1) Unused DocumentData variable [shares] in [class app.cash.barber.BarbershopBuilderTest::Fails when variable in data is not used in any field template::TradeReceipt] with no usage in installed DocumentTemplate Locales:
-        |[Locale=en-US]
+        |1) Unused DocumentData variable [shares] in Source signature [shares,1;ticker,1] with no
+        |usage in DocumentTemplate: [templateToken=tradeReceipt][locale=en-US][version=1] 
         |
       """.trimMargin(),
         exception.toString())
@@ -268,18 +267,9 @@ class BarbershopBuilderTest {
     assertEquals(
         """
         |Errors
-        |1) Installed DocumentTemplate missing required fields for Document targets
-        |Missing fields:
-        |[class app.cash.barber.examples.TransactionalSmsDocument] requires missing fields [sms_body]
-        |
-        |DocumentTemplate: DocumentTemplate(
-        | fields = mapOf(
-        |   subject={{ sender }} sent {{ amount }} on {{ deposit_expected_at }}. Cancel here: {{ cancelUrl }}
-        | ),
-        | source = class app.cash.barber.examples.RecipientReceipt,
-        | targets = [class app.cash.barber.examples.TransactionalSmsDocument],
-        | locale = [Locale=en-US]
-        |)
+        |1) Installed DocumentTemplate: [templateToken=recipientReceipt][locale=en-US][version=1]
+        |missing required fields for Document targets:
+        |[document=app.cash.barber.examples.TransactionalSmsDocument] requires missing [field=sms_body]
         |
       """.trimMargin(),
         exception.toString())
@@ -343,31 +333,13 @@ class BarbershopBuilderTest {
     assertEquals(
         """
         |Errors
-        |1) Attempted to install DocumentTemplate that will overwrite an already installed DocumentTemplate with locale
-        |[Locale=en-US].
-        |Already Installed
-        |DocumentData: class app.cash.barber.examples.RecipientReceipt
-        |Locales:
-        |[Locale=en-US]
-        |DocumentTemplates: [
-        |DocumentTemplate(
-        | fields = mapOf(
-        |   sms_body=first {{ sender }} sent you {{ amount }} on {{ deposit_expected_at }}. Cancel here: {{ cancelUrl }}
-        | ),
-        | source = class app.cash.barber.examples.RecipientReceipt,
-        | targets = [class app.cash.barber.examples.TransactionalSmsDocument],
-        | locale = [Locale=en-US]
-        |)]
+        |1) Attempted to install DocumentTemplate that will overwrite an already installed locale version
+        |DocumentTemplate: [templateToken=recipientReceipt][locale=en-US][version=1]
         |
-        |Attempted to Install
-        |DocumentTemplate(
-        | fields = mapOf(
-        |   sms_body=second {{ sender }} sent you {{ amount }} on {{ deposit_expected_at }}. Cancel here: {{ cancelUrl }}
-        | ),
-        | source = class app.cash.barber.examples.RecipientReceipt,
-        | targets = [class app.cash.barber.examples.TransactionalSmsDocument],
-        | locale = [Locale=en-US]
-        |)
+        |Already Installed DocumentTemplates
+        |TemplateToken: recipientReceipt
+        |Locales: [Locale=en-US]
+        |Installed Versions: [1]
         |
       """.trimMargin(),
         exception.toString())

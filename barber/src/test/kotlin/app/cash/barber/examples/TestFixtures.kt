@@ -44,7 +44,7 @@ val recipientReceiptSmsEmailDocumentTemplateEN_US = DocumentTemplate(
         "subject" to "{{sender}} sent you {{amount}}",
         "headline" to "You received {{amount}}",
         "short_description" to "You’ve received a payment from {{sender}}! The money will be in your bank account " +
-            "{{deposit_expected_at.casual}}.",
+            "{{deposit_expected_at}}.",
         "primary_button" to "Cancel this payment",
         "primary_button_url" to "{{cancelUrl}}",
         "sms_body" to "{{sender}} sent you {{amount}}"
@@ -59,7 +59,7 @@ val senderReceiptEmailDocumentTemplateEN_US = DocumentTemplate(
         "subject" to "You sent {{amount}} to {{recipient}}",
         "headline" to "You sent {{amount}}",
         "short_description" to "You sent a payment to {{recipient}}! The money will be in their bank account " +
-            "{{deposit_expected_at.casual}}.",
+            "{{deposit_expected_at}}.",
         "primary_button" to "Cancel this payment",
         "primary_button_url" to "{{cancelUrl}}"
     ),
