@@ -7,24 +7,28 @@ import app.cash.barber.examples.NoParametersDocument
 import app.cash.barber.examples.RecipientReceipt
 import app.cash.barber.examples.SenderReceipt
 import app.cash.barber.examples.ShadowEncodingEverythingPlaintextTestDocument
+import app.cash.barber.examples.ShadowPlaintextDocument
 import app.cash.barber.examples.TransactionalEmailDocument
 import app.cash.barber.examples.TransactionalSmsDocument
 import app.cash.barber.examples.investmentPurchaseEncodingDocumentTemplateEN_US
 import app.cash.barber.examples.investmentPurchaseShadowEncodingDocumentTemplateEN_US
 import app.cash.barber.examples.mcDonaldsInvestmentPurchase
 import app.cash.barber.examples.noParametersDocumentTemplate
+import app.cash.barber.examples.plaintextDocumentTemplateEN_US
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_CA
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_GB
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_US
+import app.cash.barber.examples.recipientReceiptSmsEmailDocumentTemplateEN_US
 import app.cash.barber.examples.senderReceiptEmailDocumentTemplateEN_US
 import app.cash.barber.models.BarberFieldEncoding
 import app.cash.barber.models.DocumentData
 import app.cash.barber.models.DocumentTemplate
 import app.cash.barber.models.Locale
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
+import app.cash.barber.models.TemplateToken.Companion.getTemplateToken
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class BarbershopBuilderTest {
   @Test
@@ -49,6 +53,19 @@ class BarbershopBuilderTest {
         .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
         .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_CA)
         .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_GB)
+        .installDocument<TransactionalSmsDocument>()
+        .build()
+  }
+
+  @Test
+  fun `Install multiple documents`() {
+    BarbershopBuilder()
+        .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsEmailDocumentTemplateEN_US)
+        .installDocumentTemplate<SenderReceipt>(senderReceiptEmailDocumentTemplateEN_US)
+        .installDocumentTemplate<InvestmentPurchase>(
+            investmentPurchaseEncodingDocumentTemplateEN_US)
+        .installDocument<EncodingTestDocument>()
+        .installDocument<TransactionalEmailDocument>()
         .installDocument<TransactionalSmsDocument>()
         .build()
   }
@@ -159,6 +176,25 @@ class BarbershopBuilderTest {
             non_shadow_field = "You purchased 100 shares of McDonald's."
         )
     )
+  }
+
+  @Test
+  fun `Barbershop does not include documents as targets where template does not satisfy all fields`() {
+    val barber = BarbershopBuilder()
+        .installDocumentTemplate<InvestmentPurchase>(
+            investmentPurchaseEncodingDocumentTemplateEN_US)
+        .installDocumentTemplate<SenderReceipt>(plaintextDocumentTemplateEN_US)
+        .installDocument<EncodingTestDocument>()
+        .installDocument<ShadowPlaintextDocument>()
+        .setWarningsAsErrors()
+        .build()
+
+    // investmentPurchaseEncodingDocumentTemplateEN_US only specifies EncodingTestDocument
+    //    but can support ShadowPlaintextDocument so it is included
+    assertEquals(setOf(EncodingTestDocument::class, ShadowPlaintextDocument::class),
+        barber.getTargetDocuments(InvestmentPurchase::class.getTemplateToken()))
+    assertEquals(setOf(ShadowPlaintextDocument::class),
+        barber.getTargetDocuments(SenderReceipt::class.getTemplateToken()))
   }
 
   @Test

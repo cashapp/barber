@@ -50,21 +50,7 @@ class BarbershopBuilder : Barbershop.Builder {
   private var warningsAsErrors: Boolean = false
   private val warnings = mutableListOf<String>()
 
-  override fun installDocumentTemplate(
-    documentDataClass: KClass<out app.cash.barber.models.DocumentData>,
-    documentTemplate: app.cash.barber.models.DocumentTemplate
-  ) = apply {
-    if (documentDataClass != documentTemplate.source) {
-      throw BarberException(errors = listOf("""
-        |Attempted to install DocumentTemplate with a DocumentData not specified in the DocumentTemplate source
-        |DocumentTemplate.source: ${documentTemplate.source.qualifiedName}
-        |DocumentData: ${documentDataClass.qualifiedName}
-        """.trimMargin()))
-    }
-    installDocumentTemplate(documentTemplate.toProto())
-  }
-
-  override fun installDocumentTemplate(documentTemplate: DocumentTemplate): Barbershop.Builder = apply {
+  override fun installDocumentTemplate(documentTemplate: DocumentTemplate) = apply {
     val templateToken = TemplateToken(documentTemplate.template_token!!)
     val signature = BarberSignature(documentTemplate.source_signature!!)
     val version = documentTemplate.version!!
@@ -103,8 +89,16 @@ class BarbershopBuilder : Barbershop.Builder {
 
   inline fun <reified DD : app.cash.barber.models.DocumentData> installDocumentTemplate(
     documentTemplate: app.cash.barber.models.DocumentTemplate
-  ) =
-      installDocumentTemplate(DD::class, documentTemplate)
+  ) = apply {
+    if (DD::class != documentTemplate.source) {
+      throw BarberException(errors = listOf("""
+        |Attempted to install DocumentTemplate with a DocumentData not specified in the DocumentTemplate source
+        |DocumentTemplate.source: ${documentTemplate.source.qualifiedName}
+        |DocumentData: ${DD::class.qualifiedName}
+        """.trimMargin()))
+    }
+    installDocumentTemplate(documentTemplate.toProto())
+  }
 
   override fun installDocument(document: KClass<out Document>) = apply {
     val documentConstructor = document.primaryConstructor
@@ -121,7 +115,7 @@ class BarbershopBuilder : Barbershop.Builder {
     }
   }
 
-  inline fun <reified D : Document> installDocument() = installDocument(D::class)
+  inline fun <reified D : Document> installDocument() = apply { installDocument(D::class) }
 
   override fun setLocaleResolver(resolver: LocaleResolver): Barbershop.Builder = apply {
     localeResolver = resolver

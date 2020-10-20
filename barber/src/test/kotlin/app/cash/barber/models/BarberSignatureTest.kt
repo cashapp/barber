@@ -2,6 +2,7 @@ package app.cash.barber.models
 
 import app.cash.barber.examples.NestedLoginCode
 import app.cash.barber.examples.SenderReceipt
+import app.cash.barber.examples.EmptyDocumentData
 import app.cash.barber.examples.TransactionalEmailDocument
 import app.cash.barber.examples.TransactionalSmsDocument
 import app.cash.barber.models.BarberSignature.Companion.getBarberSignature
@@ -48,7 +49,14 @@ class BarberSignatureTest {
   @Test
   fun `decode empty path`() {
     val actual = BarberSignature("")
-    assertEquals(mapOf<String, Type>(), actual.fields)
+    assertEquals(mapOf(), actual.fields)
+  }
+
+  @Test
+  fun `no parameter document data signature`() {
+    val noParam = EmptyDocumentData()
+    val actual = noParam.getBarberSignature()
+    assertEquals("", actual.signature)
   }
 
   @Test

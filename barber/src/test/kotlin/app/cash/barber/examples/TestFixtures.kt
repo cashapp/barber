@@ -14,6 +14,15 @@ val recipientReceiptSmsDocumentTemplateEN_US = DocumentTemplate(
     locale = EN_US
 )
 
+val plaintextDocumentTemplateEN_US = DocumentTemplate(
+    fields = mapOf(
+        "plaintext_field" to "{{recipient}} sent you {{amount}}. It will be available at {{ deposit_expected_at }}. Cancel here: {{ cancelUrl }}"
+    ),
+    source = SenderReceipt::class,
+    targets = setOf(ShadowPlaintextDocument::class),
+    locale = EN_US
+)
+
 val investmentPurchaseEncodingDocumentTemplateEN_US = DocumentTemplate(
     fields = mapOf(
         "no_annotation_field" to "You purchased {{ shares }} shares of {{ ticker }}.",

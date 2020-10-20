@@ -35,11 +35,6 @@ interface Barbershop {
   fun getWarnings(): List<String>
 
   interface Builder {
-    fun installDocumentTemplate(
-      documentDataClass: KClass<out app.cash.barber.models.DocumentData>,
-      documentTemplate: app.cash.barber.models.DocumentTemplate
-    ): Builder
-
     /**
      * Configures this Barbershop so that instances of documentTemplate.templateToken will
      * rendered by [documentTemplate] for its target locale.
@@ -82,6 +77,9 @@ interface Barbershop {
 
 inline fun <reified DD : app.cash.barber.models.DocumentData, reified D : Document> Barbershop.getBarber() = getBarber(
     DD::class, D::class)
+
+inline fun <reified D : Document> Barbershop.getBarber(templateToken: TemplateToken) = getBarber(
+    templateToken, D::class)
 
 inline fun <reified DD : app.cash.barber.models.DocumentData> Barbershop.getTargetDocuments() = getTargetDocuments(
     DD::class)
