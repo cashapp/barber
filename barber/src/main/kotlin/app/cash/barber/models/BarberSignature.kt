@@ -2,6 +2,9 @@ package app.cash.barber.models
 
 import app.cash.protos.barber.api.BarberSignature.Type
 import app.cash.protos.barber.api.DocumentData
+import app.cash.protos.barber.api.DocumentTemplate
+import com.github.mustachejava.MustacheFactory
+import java.io.StringReader
 import java.time.Duration
 import java.time.Instant
 import kotlin.reflect.KClass
@@ -22,8 +25,11 @@ data class BarberSignature(
 
   /** Support recursive, primitive types in [DocumentData] protos */
 
-  /** Return true if this signature can satisfy the target signature (ie. superset of fields) */
+  /** Return true if this signature can satisfy the target signature including types (ie. superset of fields) */
   fun canSatisfy(target: BarberSignature) = fields.entries.containsAll(target.fields.entries)
+
+  /** Return true if this signature can satisfy the target signature ignorant of types (ie. superset of fields) */
+  fun canSatisfyNaively(target: BarberSignature) = fields.keys.containsAll(target.fields.keys)
 
   companion object {
     private const val NAME_TYPE_SEPARATOR = ','
@@ -98,6 +104,19 @@ data class BarberSignature(
     fun KClass<*>.getBarberSignature() = BarberSignature(asFieldsMap())
     fun app.cash.barber.models.DocumentData.getBarberSignature() = BarberSignature(
         this::class.asFieldsMap())
+
+    /** BarberSignature is designated as naive since no type can be parsed from the code, so it is always String */
+    fun DocumentTemplate.getNaiveSourceBarberSignature(mustacheFactory: MustacheFactory) = BarberSignature(
+        fields.fold(mapOf()) { acc, field ->
+          acc + mustacheFactory.compile(StringReader(field.template!!), field.template).codes.fold(mapOf()) { acc2, code ->
+            if (code.name != null) {
+              acc2 + mapOf(code.name to Type.STRING)
+            } else {
+              acc2
+            }
+          }
+        }
+    )
 
     fun Document.getBarberSignature() = BarberSignature(this::class.asFieldsMap())
   }

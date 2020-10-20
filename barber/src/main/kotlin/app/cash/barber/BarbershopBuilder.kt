@@ -6,7 +6,7 @@ import app.cash.barber.models.BarberSignature
 import app.cash.barber.models.BarberSignature.Companion.getBarberSignature
 import app.cash.barber.models.CompiledDocumentTemplate
 import app.cash.barber.models.CompiledDocumentTemplate.Companion.compileAndValidate
-import app.cash.barber.models.CompiledDocumentTemplate.Companion.getKey
+import app.cash.barber.models.CompiledDocumentTemplate.Companion.prettyPrint
 import app.cash.barber.models.Document
 import app.cash.barber.models.Locale
 import app.cash.barber.models.TemplateToken
@@ -70,7 +70,7 @@ class BarbershopBuilder : Barbershop.Builder {
         val installedVersions = localeVersions.keys.map { it.version }
         throw BarberException(errors = listOf("""
             |Attempted to install DocumentTemplate that will overwrite an already installed locale version
-            |${documentTemplate.getKey()}
+            |${documentTemplate.prettyPrint()}
             |
             |Already Installed DocumentTemplates
             |TemplateToken: $templateToken

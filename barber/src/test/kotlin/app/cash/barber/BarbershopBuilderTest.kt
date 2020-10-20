@@ -21,6 +21,7 @@ import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_US
 import app.cash.barber.examples.recipientReceiptSmsEmailDocumentTemplateEN_US
 import app.cash.barber.examples.senderReceiptEmailDocumentTemplateEN_US
 import app.cash.barber.models.BarberFieldEncoding
+import app.cash.barber.models.BarberSignature
 import app.cash.barber.models.DocumentData
 import app.cash.barber.models.DocumentTemplate
 import app.cash.barber.models.Locale
@@ -102,6 +103,48 @@ class BarbershopBuilderTest {
       |1) Attempted to install DocumentTemplate with a DocumentData not specified in the DocumentTemplate source
       |DocumentTemplate.source: app.cash.barber.examples.RecipientReceipt
       |DocumentData: app.cash.barber.examples.SenderReceipt
+      |
+      """.trimMargin(), exception.toString())
+  }
+
+  @Test
+  fun `Passes when DocumentTemplate naively matches source signature since types all resolve to String`() {
+    BarbershopBuilder()
+        .installDocumentTemplate(recipientReceiptSmsEmailDocumentTemplateEN_US.toProto().copy(
+            source_signature = BarberSignature(
+                mapOf(
+                    "sender" to app.cash.protos.barber.api.BarberSignature.Type.STRING,
+                    "amount" to app.cash.protos.barber.api.BarberSignature.Type.STRING,
+                    "cancelUrl" to app.cash.protos.barber.api.BarberSignature.Type.STRING,
+                    "deposit_expected_at" to app.cash.protos.barber.api.BarberSignature.Type.STRING
+                )
+            ).signature
+        ))
+        .installDocument<TransactionalEmailDocument>()
+        .installDocument<TransactionalSmsDocument>()
+        .build()
+  }
+
+  @Test
+  fun `Fails when DocumentTemplate installed where explicit source_signature does not match computed implicit source signature`() {
+    val exception = assertFailsWith<BarberException> {
+      BarbershopBuilder()
+          .installDocumentTemplate(recipientReceiptSmsEmailDocumentTemplateEN_US.toProto().copy(
+              source_signature = BarberSignature(
+                  mapOf(
+                      "sender" to app.cash.protos.barber.api.BarberSignature.Type.STRING,
+                      "amount" to app.cash.protos.barber.api.BarberSignature.Type.STRING,
+                      "deposit_expected_at" to app.cash.protos.barber.api.BarberSignature.Type.STRING
+                  )
+              ).signature
+          ))
+          .installDocument<TransactionalEmailDocument>()
+          .installDocument<TransactionalSmsDocument>()
+          .build()
+    }
+    assertEquals("""
+      |Errors
+      |1) Missing variable [cancelUrl] for DocumentData with [templateToken=recipientReceipt] for DocumentTemplate field [Field{key=primary_button_url, template=\{\{cancelUrl\}\}}]
       |
       """.trimMargin(), exception.toString())
   }
