@@ -51,6 +51,8 @@ data class CompiledDocumentTemplate(
       // Initialize BarberException
       val errors: MutableList<String> = mutableListOf()
 
+      val explicitSourceSignature = BarberSignature(source_signature!!)
+
       // Common projections for the following validation
       val targetKParameterDocumentMap = target_signatures.map { signature ->
         installedDocuments.row(BarberSignature(signature)).values.map {
@@ -96,7 +98,7 @@ data class CompiledDocumentTemplate(
             .map { (kParameter, document) -> "[document=${document.qualifiedName}] requires missing [field=${kParameter.name}]" }
             .joinToString("\n")
         errors.add("""
-              |Installed ${this.getKey()}
+              |Installed ${this.prettyPrint()}
               |missing required fields for Document targets:
               |$documentsWithMissingFields
               """.trimMargin())
@@ -146,7 +148,7 @@ data class CompiledDocumentTemplate(
       )
 
       // DocumentTemplates must only use variables from source DocumentData in their fields
-      val signatureFieldNames = BarberSignature(source_signature!!).fields.keys
+      val signatureFieldNames = explicitSourceSignature.fields.keys
       compiledDocumentTemplate.reducedFieldCodeMap().forEach { (name, codes) ->
         // Check for missing variables in field templates
         codes.forEach { code ->
@@ -163,12 +165,11 @@ data class CompiledDocumentTemplate(
 
       // Check for unused Source signature field not used in any installed DocumentTemplate field
       val codes = compiledDocumentTemplate.reducedFieldCodeSet()
-      val signature = BarberSignature(source_signature)
-      signature.fields.forEach { (fieldName, _) ->
+      explicitSourceSignature.fields.forEach { (fieldName, _) ->
         if (!codes.map { it }.contains(fieldName)) {
           warnings.add("""
           |Unused DocumentData variable [$fieldName] in Source signature [$source_signature] with no
-          |usage in ${this.getKey()} 
+          |usage in ${prettyPrint()} 
         """.trimMargin())
         }
       }
@@ -179,7 +180,7 @@ data class CompiledDocumentTemplate(
       return compiledDocumentTemplate
     }
 
-    fun DocumentTemplate.getKey() = "DocumentTemplate: [templateToken=$template_token][locale=$locale][version=$version]"
+    fun DocumentTemplate.prettyPrint() = "DocumentTemplate: [templateToken=$template_token][locale=$locale][version=$version]"
 
     /** Returns values from a Map as an aggregated set */
     fun Map<*, Set<String>>.reduceToValuesSet(): Set<String> =

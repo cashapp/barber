@@ -5,9 +5,12 @@ import app.cash.barber.examples.SenderReceipt
 import app.cash.barber.examples.EmptyDocumentData
 import app.cash.barber.examples.TransactionalEmailDocument
 import app.cash.barber.examples.TransactionalSmsDocument
+import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_US
 import app.cash.barber.models.BarberSignature.Companion.getBarberSignature
+import app.cash.barber.models.BarberSignature.Companion.getNaiveSourceBarberSignature
 import app.cash.protos.barber.api.BarberSignature.Type
 import app.cash.protos.barber.api.DocumentData
+import com.github.mustachejava.DefaultMustacheFactory
 import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.time.Instant
@@ -16,6 +19,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class BarberSignatureTest {
+  val mustacheFactory = DefaultMustacheFactory()
+
   @Test
   fun `encode happy path`() {
     val fields = mapOf(
@@ -90,6 +95,37 @@ class BarberSignatureTest {
     ))
     val actual = supersetSource.canSatisfy(target)
     assertFalse(actual)
+  }
+
+  @Test
+  fun `canSatisfyNaively happy path`() {
+    val supersetSource = BarberSignature(mapOf(
+        "name1" to Type.STRING,
+        "name2" to Type.LONG,
+        "name3" to Type.DURATION,
+        "name4" to Type.INSTANT
+    ))
+    val target = BarberSignature(mapOf(
+        "name1" to Type.STRING,
+        "name2" to Type.STRING,
+    ))
+    assertTrue(supersetSource.canSatisfyNaively(target))
+  }
+
+  @Test
+  fun `canSatisfyNaively failure path`() {
+    val supersetSource = BarberSignature(mapOf(
+        "name1" to Type.STRING,
+        "name2" to Type.STRING,
+
+        ))
+    val target = BarberSignature(mapOf(
+        "name1" to Type.STRING,
+        "name2" to Type.LONG,
+        "name3" to Type.DURATION,
+        "name4" to Type.INSTANT
+    ))
+    assertFalse(supersetSource.canSatisfyNaively(target))
   }
 
   @Test
@@ -256,6 +292,20 @@ class BarberSignatureTest {
         "button.text" to Type.STRING,
         "button.link" to Type.STRING,
         "button.size" to Type.STRING,
+    ))
+    assertEquals(expected, actual)
+  }
+
+  @Test
+  fun `implicit source signature for DocumentTemplate proto`() {
+    val actual = recipientReceiptSmsDocumentTemplateEN_US
+        .toProto()
+        .getNaiveSourceBarberSignature(mustacheFactory)
+    val expected = BarberSignature(mapOf(
+        "sender" to Type.STRING,
+        "amount" to Type.STRING,
+        "cancelUrl" to Type.STRING,
+        "deposit_expected_at" to Type.STRING,
     ))
     assertEquals(expected, actual)
   }
