@@ -92,7 +92,8 @@ data class CompiledDocumentTemplate(
         val missingFields = nonNullableTargetFieldNames.subtract(documentTemplateFieldNames)
         val documentsWithMissingFields = nonNullableTargetKParameterDocumentMap.filter {
           missingFields.contains(it.key.name)
-        }.map { (kParameter, document) -> "[document=${document.qualifiedName}] requires missing [field=${kParameter.name}]" }
+        }
+            .map { (kParameter, document) -> "[document=${document.qualifiedName}] requires missing [field=${kParameter.name}]" }
             .joinToString("\n")
         errors.add("""
               |Installed ${this.getKey()}
@@ -118,16 +119,23 @@ data class CompiledDocumentTemplate(
       fields.map { field ->
         val fieldName = field.key!!
         val fieldValue = field.template!!
-        installedDocuments.column(fieldName).keys.forEach { signature ->
-          // Render using a MustacheFactory that will respect any field BarberFieldEncoding annotations
-          val barberField = installedDocuments.get(signature, fieldName).kParameter
-              .annotations
-              .firstOrNull { it is BarberField } as BarberField?
-          val mustache = mustacheFactoryProvider.get(barberField?.encoding)
-              .compile(StringReader(fieldValue), fieldValue)
-          val document = installedDocuments.row(signature)[fieldName]!!.document
-          documentTemplateFields.put(fieldName, document, mustache)
-        }
+        installedDocuments.column(fieldName).keys
+            .filter { signature ->
+              // Only add documents to table where the signature can be satisfied by the template
+              target_signatures.any {
+                BarberSignature(it).canSatisfy(signature)
+              }
+            }
+            .forEach { signature ->
+              // Render using a MustacheFactory that will respect any field BarberFieldEncoding annotations
+              val barberField = installedDocuments.get(signature, fieldName).kParameter
+                  .annotations
+                  .firstOrNull { it is BarberField } as BarberField?
+              val mustache = mustacheFactoryProvider.get(barberField?.encoding)
+                  .compile(StringReader(fieldValue), fieldValue)
+              val document = installedDocuments.row(signature)[fieldName]!!.document
+              documentTemplateFields.put(fieldName, document, mustache)
+            }
       }
 
       val targets = documentTemplateFields.columnKeySet()
@@ -152,7 +160,6 @@ data class CompiledDocumentTemplate(
 
       BarberException.maybeThrowBarberException(errors = errors, warnings = warnings,
           warningsAsErrors = warningsAsErrors)
-
 
       // Check for unused Source signature field not used in any installed DocumentTemplate field
       val codes = compiledDocumentTemplate.reducedFieldCodeSet()
