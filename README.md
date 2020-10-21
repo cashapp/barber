@@ -34,7 +34,7 @@ To get started using Barber, skim below to understand the different elements use
 Our [change log][changelog] has release history. API is subject to change. 
 
 ```kotlin
-implementation("app.cash.barber:barber:0.3.0")
+implementation("app.cash.barber:barber:0.3.1")
 ```
 
 Snapshot builds are [available][snap].
