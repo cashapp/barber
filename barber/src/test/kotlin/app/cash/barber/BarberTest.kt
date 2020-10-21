@@ -3,11 +3,14 @@ package app.cash.barber
 import app.cash.barber.examples.EncodingTestDocument
 import app.cash.barber.examples.InvestmentPurchase
 import app.cash.barber.examples.NestedLoginCode
+import app.cash.barber.examples.NullableSupportUrlReceipt
 import app.cash.barber.examples.RecipientReceipt
 import app.cash.barber.examples.TransactionalEmailDocument
 import app.cash.barber.examples.TransactionalSmsDocument
 import app.cash.barber.examples.investmentPurchaseEncodingDocumentTemplateEN_US
 import app.cash.barber.examples.mcDonaldsInvestmentPurchase
+import app.cash.barber.examples.nullSupportUrlReceipt
+import app.cash.barber.examples.nullableSupportUrlReceipt_EN_US
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_CA
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_GB
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_US
@@ -46,6 +49,20 @@ class BarberTest {
 
   @Test
   fun `Rendered spec is of specific Document type and allows field access`() {
+    val barber = BarbershopBuilder()
+        .installDocument<TransactionalSmsDocument>()
+        .installDocumentTemplate<NullableSupportUrlReceipt>(nullableSupportUrlReceipt_EN_US)
+        .build()
+
+    val spec = barber.getBarber<NullableSupportUrlReceipt, TransactionalSmsDocument>()
+        .render(nullSupportUrlReceipt, EN_US)
+
+    assertThat(spec.sms_body).isEqualTo(
+        "You got sent \$50.00.")
+  }
+
+  @Test
+  fun `Null DocumentData fields are rendered as empty string`() {
     val barber = BarbershopBuilder()
         .installDocument<TransactionalSmsDocument>()
         .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
