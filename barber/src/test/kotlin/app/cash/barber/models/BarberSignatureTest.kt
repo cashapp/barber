@@ -1,8 +1,8 @@
 package app.cash.barber.models
 
+import app.cash.barber.examples.EmptyDocumentData
 import app.cash.barber.examples.NestedLoginCode
 import app.cash.barber.examples.SenderReceipt
-import app.cash.barber.examples.EmptyDocumentData
 import app.cash.barber.examples.TransactionalEmailDocument
 import app.cash.barber.examples.TransactionalSmsDocument
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_US
@@ -306,6 +306,27 @@ class BarberSignatureTest {
         "amount" to Type.STRING,
         "cancelUrl" to Type.STRING,
         "deposit_expected_at" to Type.STRING,
+    ))
+    assertEquals(expected, actual)
+  }
+
+  @Test
+  fun `Default to String for null DocumentData Fields when Signature calculation is ambiguous`() {
+    val actual = DocumentData(
+        template_token = "T_123",
+        fields = listOf(
+            DocumentData.Field(
+                key = "alpha",
+                value_string = "non null"
+            ),
+            DocumentData.Field(
+                key = "bravo"
+            )
+        )
+    ).getBarberSignature()
+    val expected = BarberSignature(mapOf(
+        "alpha" to Type.STRING,
+        "bravo" to Type.STRING,
     ))
     assertEquals(expected, actual)
   }
