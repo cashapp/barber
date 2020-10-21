@@ -40,7 +40,9 @@ internal class RealBarber<D : Document>(
       // TODO add configurable formatters based on locale for non-string types
           ?: field.value_long?.toString()
           ?: field.value_duration?.toString()
-          ?: field.value_instant.toString())
+          ?: field.value_instant?.toString()
+          // If all values are null, render null as empty string
+          ?: "")
       acc + mapOf(field.key!! to value)
     }
 
