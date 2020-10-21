@@ -86,8 +86,9 @@ Cutting a Release
     ./gradlew clean uploadArchives
     ```
 
-5. Visit [Sonatype Nexus][sonatype_nexus] to promote (close then release) the artifact. Or drop it
-   if there is a problem!
+5. Visit [Sonatype Nexus][sonatype_nexus] to promote (close then release) the artifact. Or drop it if there is a problem!
+
+    ![Sonatype Release](/img/sonatype-release.gif)
 
 6. Tag the release, prepare for the next one, and push to GitHub.
 
@@ -99,7 +100,7 @@ Cutting a Release
       gradle.properties
     git commit -am "Prepare next development version."
     git push && git push --tags
-    ```
+    ``` 
 
- [sonatype_issues]: https://issues.sonatype.org/
- [sonatype_nexus]: https://oss.sonatype.org/
+[sonatype_issues]: https://issues.sonatype.org/
+[sonatype_nexus]: https://oss.sonatype.org/
