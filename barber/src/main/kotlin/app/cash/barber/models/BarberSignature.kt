@@ -60,20 +60,12 @@ data class BarberSignature(
         mapOf<String, Type>()) { acc, field ->
       val key = field.key!!
       val value = when {
-        field.value_string != null -> {
-          Type.STRING
-        }
-        field.value_long != null -> {
-          Type.LONG
-        }
-        field.value_duration != null -> {
-          Type.DURATION
-        }
-        field.value_instant != null -> {
-          Type.INSTANT
-        }
-        else -> throw IllegalArgumentException(
-            "Can't determine field type since all value fields are null")
+        field.value_string != null -> Type.STRING
+        field.value_long != null -> Type.LONG
+        field.value_duration != null -> Type.DURATION
+        field.value_instant != null -> Type.INSTANT
+        // For cases where a DocumentData field in the template can be null, default to STRING
+        else -> Type.STRING
       }
       acc + mapOf(key to value)
     }
@@ -108,7 +100,8 @@ data class BarberSignature(
     /** BarberSignature is designated as naive since no type can be parsed from the code, so it is always String */
     fun DocumentTemplate.getNaiveSourceBarberSignature(mustacheFactory: MustacheFactory) = BarberSignature(
         fields.fold(mapOf()) { acc, field ->
-          acc + mustacheFactory.compile(StringReader(field.template!!), field.template).codes.fold(mapOf()) { acc2, code ->
+          acc + mustacheFactory.compile(StringReader(field.template!!), field.template).codes.fold(
+              mapOf()) { acc2, code ->
             if (code.name != null) {
               acc2 + mapOf(code.name to Type.STRING)
             } else {
