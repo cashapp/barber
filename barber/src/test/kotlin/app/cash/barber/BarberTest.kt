@@ -57,8 +57,7 @@ class BarberTest {
     val spec = barber.getBarber<NullableSupportUrlReceipt, TransactionalSmsDocument>()
         .render(nullSupportUrlReceipt, EN_US)
 
-    assertThat(spec.sms_body).isEqualTo(
-        "You got sent \$50.00.")
+    assertThat(spec.sms_body).isEqualTo("You got sent \$50.00.")
   }
 
   @Test
