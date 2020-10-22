@@ -23,6 +23,12 @@ dependencies {
   testImplementation dep.kotlinTest
 }
 
+sourceSets {
+  main.kotlin {
+    srcDirs += "$buildDir/generated/source/wire/"
+  }
+}
+
 afterEvaluate { project ->
   project.tasks.dokka {
     outputDirectory = "$rootDir/docs/0.x"
