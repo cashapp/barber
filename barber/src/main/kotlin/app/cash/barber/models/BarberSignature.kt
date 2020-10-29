@@ -50,14 +50,13 @@ data class BarberSignature(
       mapOf()
     } else {
       signature.split(FIELD_SEPARATOR)
-          .fold(mapOf<String, Type>()) { acc, raw ->
+          .associate { raw ->
             val fieldType = raw.split(NAME_TYPE_SEPARATOR)
-            acc + mapOf(fieldType.first() to Type.values()[fieldType.last().toInt()])
+            fieldType.first() to Type.values()[fieldType.last().toInt()]
           }.toSortedMap()
     }
 
-    private fun DocumentData.asFieldsMap() = this.fields.fold(
-        mapOf<String, Type>()) { acc, field ->
+    private fun DocumentData.asFieldsMap() = this.fields.associate { field ->
       val key = field.key!!
       val value = when {
         field.value_string != null -> Type.STRING
@@ -67,27 +66,27 @@ data class BarberSignature(
         // For cases where a DocumentData field in the template can be null, default to STRING
         else -> Type.STRING
       }
-      acc + mapOf(key to value)
+      key to value
     }
 
     fun DocumentData.getBarberSignature() = BarberSignature(asFieldsMap())
 
-    private fun KClass<*>.asFieldsMap(): Map<String, Type> = memberProperties.fold(
-        mapOf<String, Type>()) { acc, kProperty ->
+    private fun KClass<*>.asFieldsMap(): Map<String, Type> = memberProperties.mapToMaps { kProperty ->
       val name = kProperty.name
       // Only recursively define Signature for nested data classes
       val type = kProperty.returnType.classifier as? KClass<*>
           ?: error(
               "Failure to generate signature because of non-KClass<*> [memberProperty=$name] with [returnType=${kProperty.returnType}]"
           )
-      acc + when (type) {
+      when (type) {
         String::class -> mapOf(name to Type.STRING)
         Long::class -> mapOf(name to Type.LONG)
         Duration::class -> mapOf(name to Type.DURATION)
         Instant::class -> mapOf(name to Type.INSTANT)
         else -> {
-          require(
-              type.isData) { "Failure to generate signature because of [memberProperty=$name] which must be a data class [returnType=${kProperty.returnType}]" }
+          require(type.isData) {
+            "Failure to generate signature because of [memberProperty=$name] which must be a data class [returnType=${kProperty.returnType}]"
+          }
           type.asFieldsMap().mapKeys { "${name}.${it.key}" }
         }
       }
@@ -99,15 +98,12 @@ data class BarberSignature(
 
     /** BarberSignature is designated as naive since no type can be parsed from the code, so it is always String */
     fun DocumentTemplate.getNaiveSourceBarberSignature(mustacheFactory: MustacheFactory) = BarberSignature(
-        fields.fold(mapOf()) { acc, field ->
-          acc + mustacheFactory.compile(StringReader(field.template!!), field.template).codes.fold(
-              mapOf()) { acc2, code ->
-            if (code.name != null) {
-              acc2 + mapOf(code.name to Type.STRING)
-            } else {
-              acc2
-            }
-          }
+        fields.mapToMaps { field ->
+          mustacheFactory
+              .compile(StringReader(field.template!!), field.template)
+              .codes.filterNot { it.name == null }.associate { code ->
+                code.name to Type.STRING
+              }
         }
     )
 

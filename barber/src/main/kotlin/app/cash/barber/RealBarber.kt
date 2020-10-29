@@ -1,11 +1,13 @@
 package app.cash.barber
 
+import app.cash.barber.locale.Locale
+import app.cash.barber.locale.LocaleResolver
 import app.cash.barber.models.BarberSignature
 import app.cash.barber.models.BarberSignature.Companion.getBarberSignature
 import app.cash.barber.models.Document
-import app.cash.barber.models.Locale
 import app.cash.protos.barber.api.DocumentData
 import com.github.mustachejava.Mustache
+import com.google.common.collect.HashBasedTable
 import com.google.common.collect.Table
 import java.io.StringWriter
 import kotlin.reflect.KClass
@@ -35,15 +37,9 @@ internal class RealBarber<D : Document>(
     locale: Locale,
     version: Long
   ): D {
-    val documentDataMap = documentData.fields.fold(mapOf<String, String>()) { acc, field ->
-      val value = (field.value_string
-      // TODO add configurable formatters based on locale for non-string types
-          ?: field.value_long?.toString()
-          ?: field.value_duration?.toString()
-          ?: field.value_instant?.toString()
-          // If all values are null, render null as empty string
-          ?: "")
-      acc + mapOf(field.key!! to value)
+    val documentDataMap = documentData.fields.associate { field ->
+      val value = extractAndFormatFieldValue(field)
+      field.key!! to value
     }
 
     val documentDataSignature = documentData.getBarberSignature()
@@ -55,17 +51,17 @@ internal class RealBarber<D : Document>(
         }
 
     // Choose a Locale based on available installed versions
-    val localeLookupMap = compatibleLocaleVersions
-        .entries
-        .fold(mapOf<Locale, Map<Long, BarbershopBuilder.DocumentTemplateDb>>()) { acc, (key, db) ->
-          val versionMap = acc[key.locale] ?: mapOf()
-          acc + mapOf(key.locale to versionMap + mapOf(key.version to db))
-        }
-    val versionsForLocale = localeResolver.resolve(locale, localeLookupMap)
+    val localeLookupTable =
+        HashBasedTable.create<Locale, Long, BarbershopBuilder.DocumentTemplateDb>()
+    compatibleLocaleVersions.forEach { (documentTemplateKey, documentTemplateDb) ->
+      localeLookupTable.put(documentTemplateKey.locale, documentTemplateKey.version,
+          documentTemplateDb)
+    }
+    val versionsForLocale = localeResolver.resolve(locale, localeLookupTable)
 
     // Resolve exact version or latest compatible based on DocumentData BarberSignature
     val documentTemplateDB = versionsForLocale[version]
-        ?: versionsForLocale.toSortedMap().entries.last().value
+        ?: versionsForLocale.maxByOrNull { it.key }?.value
     val compiledDocumentTemplate = documentTemplateDB?.compiledDocumentTemplate
         ?: throw BarberException(errors = listOf("""
             |RealBarber unable to find a DocumentTemplate version that matches the input DocumentData signature 
@@ -106,6 +102,14 @@ internal class RealBarber<D : Document>(
     // Build the Document instance with the rendered DocumentTemplate parameters
     return document.primaryConstructor!!.callBy(parameters)
   }
+
+  /** TODO add configurable formatters based on locale for non-string types */
+  private fun extractAndFormatFieldValue(field: DocumentData.Field): String = field.value_string
+      ?: field.value_long?.toString()
+      ?: field.value_duration?.toString()
+      ?: field.value_instant?.toString()
+      // If all values are null, render null as empty string
+      ?: ""
 
   /* Render a pre-compiled nullable Mustache template */
   private fun Mustache?.renderMustache(context: Map<String, String>): String? = if (this == null) {

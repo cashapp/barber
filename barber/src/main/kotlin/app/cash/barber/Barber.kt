@@ -1,7 +1,7 @@
 package app.cash.barber
 
 import app.cash.barber.models.Document
-import app.cash.barber.models.Locale
+import app.cash.barber.locale.Locale
 import app.cash.protos.barber.api.DocumentData
 
 /**

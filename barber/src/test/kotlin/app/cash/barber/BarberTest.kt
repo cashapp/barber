@@ -17,10 +17,10 @@ import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_US
 import app.cash.barber.examples.sandy50Receipt
 import app.cash.barber.models.BarberSignature
 import app.cash.barber.models.DocumentTemplate
-import app.cash.barber.models.Locale.Companion.EN_CA
-import app.cash.barber.models.Locale.Companion.EN_GB
-import app.cash.barber.models.Locale.Companion.EN_US
-import app.cash.barber.models.Locale.Companion.ES_US
+import app.cash.barber.locale.Locale.Companion.EN_CA
+import app.cash.barber.locale.Locale.Companion.EN_GB
+import app.cash.barber.locale.Locale.Companion.EN_US
+import app.cash.barber.locale.Locale.Companion.ES_US
 import kotlin.test.assertEquals
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Disabled

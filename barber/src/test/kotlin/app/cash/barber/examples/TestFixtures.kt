@@ -1,9 +1,9 @@
 package app.cash.barber.examples
 
 import app.cash.barber.models.DocumentTemplate
-import app.cash.barber.models.Locale.Companion.EN_CA
-import app.cash.barber.models.Locale.Companion.EN_GB
-import app.cash.barber.models.Locale.Companion.EN_US
+import app.cash.barber.locale.Locale.Companion.EN_CA
+import app.cash.barber.locale.Locale.Companion.EN_GB
+import app.cash.barber.locale.Locale.Companion.EN_US
 
 val recipientReceiptSmsDocumentTemplateEN_US = DocumentTemplate(
     fields = mapOf(

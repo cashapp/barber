@@ -1,4 +1,4 @@
-package app.cash.barber.models
+package app.cash.barber.locale
 
 /**
  * Container for locale string
