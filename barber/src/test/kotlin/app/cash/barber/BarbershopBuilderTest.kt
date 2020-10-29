@@ -165,6 +165,59 @@ class BarbershopBuilderTest {
   }
 
   @Test
+  fun `Install fails on no DocumentTemplate and DocumentData`() {
+    val exception = assertFailsWith<BarberException> {
+      BarbershopBuilder()
+          .installDocument<TransactionalEmailDocument>()
+          .build()
+    }
+
+    assertEquals(
+        """
+          |Errors
+          |1) No DocumentData or DocumentTemplates installed
+          |
+        """.trimMargin(),
+        exception.toString())
+  }
+
+  @Test
+  fun `Install warns on missing Document for an installed DocumentTemplate`() {
+    val exception = assertFailsWith<BarberException> {
+      BarbershopBuilder()
+          .installDocumentTemplate<RecipientReceipt>(investmentPurchaseShadowEncodingDocumentTemplateEN_US)
+          .installDocument<EncodingTestDocument>()
+          .setWarningsAsErrors()
+          .build()
+    }
+    assertEquals(
+        """
+          |Errors
+          |1) Attempted to install DocumentTemplate with a DocumentData not specified in the DocumentTemplate source
+          |DocumentTemplate.source: app.cash.barber.examples.InvestmentPurchase
+          |DocumentData: app.cash.barber.examples.RecipientReceipt
+          |
+        """.trimMargin(),
+        exception.toString())
+  }
+
+  @Test
+  fun `setWarningsAsErrors fails out early for install with no Documents`() {
+    val exception = assertFailsWith<BarberException> {
+      BarbershopBuilder()
+          .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
+          .build()
+    }
+    assertEquals(
+        """
+          |Errors
+          |1) No Documents installed
+          |
+        """.trimMargin(),
+        exception.toString())
+  }
+
+  @Test
   fun `Fails on unused dangling installed Document`() {
     val exception = assertFailsWith<BarberException> {
       BarbershopBuilder()

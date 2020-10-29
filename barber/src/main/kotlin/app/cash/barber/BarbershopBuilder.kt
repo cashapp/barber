@@ -142,13 +142,13 @@ class BarbershopBuilder : Barbershop.Builder {
 
     // Warn if Barber elements are not installed
     if (isEmpty()) {
-      warnings.add("""
+      errors.add("""
         |No DocumentData or DocumentTemplates installed
       """.trimMargin())
     }
     val installedDocumentsIsEmpty = installedDocuments.cellSet().isEmpty()
     if (installedDocumentsIsEmpty) {
-      warnings.add("""
+      errors.add("""
         |No Documents installed
       """.trimMargin())
     }
