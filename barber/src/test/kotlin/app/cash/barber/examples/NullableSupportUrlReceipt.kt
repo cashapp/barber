@@ -2,7 +2,7 @@ package app.cash.barber.examples
 
 import app.cash.barber.models.DocumentData
 import app.cash.barber.models.DocumentTemplate
-import app.cash.barber.models.Locale
+import app.cash.barber.locale.Locale
 
 data class NullableSupportUrlReceipt(
   val amount: String,

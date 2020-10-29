@@ -1,8 +1,6 @@
-package app.cash.barber.examples
+package app.cash.barber.locale
 
-import app.cash.barber.LocaleResolver
-import app.cash.barber.models.Locale
-import app.cash.barber.models.Locale.Companion.EN_CA
+import app.cash.barber.locale.Locale.Companion.EN_CA
 
 class MapleSyrupOrFirstLocaleResolver : LocaleResolver {
   override fun resolve(locale: Locale, options: Set<Locale>): Locale =

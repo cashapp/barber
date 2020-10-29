@@ -1,5 +1,6 @@
 package app.cash.barber
 
+import app.cash.barber.locale.MatchOrFirstLocaleResolver
 import app.cash.barber.models.BarberFieldEncoding
 import app.cash.barber.models.BarberKey
 import app.cash.barber.models.BarberSignature
@@ -8,7 +9,8 @@ import app.cash.barber.models.CompiledDocumentTemplate
 import app.cash.barber.models.CompiledDocumentTemplate.Companion.compileAndValidate
 import app.cash.barber.models.CompiledDocumentTemplate.Companion.prettyPrint
 import app.cash.barber.models.Document
-import app.cash.barber.models.Locale
+import app.cash.barber.locale.Locale
+import app.cash.barber.locale.LocaleResolver
 import app.cash.barber.models.TemplateToken
 import app.cash.protos.barber.api.DocumentTemplate
 import com.google.common.collect.HashBasedTable
@@ -162,10 +164,9 @@ class BarbershopBuilder : Barbershop.Builder {
           usedDocumentSignatures.contains(signature)
         }.toSet()
         val danglingDocuments = danglingDocumentSignatures.map { signature ->
-          installedDocuments.row(BarberSignature(signature)).values.fold(
-              setOf<String?>()) { acc, documentDB ->
-            acc + documentDB.document.qualifiedName
-          }
+          installedDocuments.row(BarberSignature(signature)).values.map { documentDB ->
+            documentDB.document.qualifiedName
+          }.toSet()
         }.reduce { acc, set -> acc + set }.toSet()
         warnings.add("""
           |Document installed that is not used in any installed DocumentTemplates
@@ -205,15 +206,16 @@ class BarbershopBuilder : Barbershop.Builder {
           .map { it.compiledDocumentTemplate?.targets ?: setOf() }
           .reduce { acc, set -> acc + set }
           .toSet()
-      val localeVersionsMap = versions.entries.fold(
-          mapOf<RealBarber.DocumentTemplateKey, DocumentTemplateDb>()) { acc, (key, db) ->
-        val (_, locale, sourceBarberSignature, version) = key
-        acc + mapOf(RealBarber.DocumentTemplateKey(
-            locale = locale,
-            sourceBarberSignature = sourceBarberSignature,
-            version = version
-        ) to db)
-      }
+      val localeVersionsMap: Map<RealBarber.DocumentTemplateKey, DocumentTemplateDb> =
+          versions.entries.associate { (key, db) ->
+            val (_, locale, sourceBarberSignature, version) = key
+            RealBarber.DocumentTemplateKey(
+                locale = locale,
+                sourceBarberSignature = sourceBarberSignature,
+                version = version
+            ) to db
+          }
+
       documentTargets.forEach { document ->
         barbers[BarberKey(templateToken, document)] = RealBarber(
             document = document,

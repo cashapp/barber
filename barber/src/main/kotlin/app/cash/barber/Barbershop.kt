@@ -1,5 +1,6 @@
 package app.cash.barber
 
+import app.cash.barber.locale.LocaleResolver
 import app.cash.barber.models.BarberFieldEncoding
 import app.cash.barber.models.BarberKey
 import app.cash.barber.models.Document

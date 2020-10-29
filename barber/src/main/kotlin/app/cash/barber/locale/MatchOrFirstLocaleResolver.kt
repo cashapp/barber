@@ -1,6 +1,4 @@
-package app.cash.barber
-
-import app.cash.barber.models.Locale
+package app.cash.barber.locale
 
 internal object MatchOrFirstLocaleResolver : LocaleResolver {
   override fun resolve(locale: Locale, options: Set<Locale>): Locale =

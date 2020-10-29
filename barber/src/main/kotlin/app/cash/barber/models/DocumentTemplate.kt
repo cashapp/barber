@@ -1,5 +1,6 @@
 package app.cash.barber.models
 
+import app.cash.barber.locale.Locale
 import app.cash.barber.models.BarberSignature.Companion.getBarberSignature
 import app.cash.barber.models.TemplateToken.Companion.getTemplateToken
 import kotlin.reflect.KClass
@@ -7,20 +8,17 @@ import kotlin.reflect.KClass
 /**
  * For each DocumentData we have a DocumentTemplate that provides a natural language for the document.
  * It uses Mustache templates to provide openings for the DocumentData fields.
- *
- * Each DocumentTemplate is specific to a locale.
- *
- * @property [fields] Map of a Document output key to a template String value that can contain DocumentData input values
- * @property [source] KClass of DocumentData
- * @property [targets] Set of Documents that DocumentTemplate can render to
- * @property [locale] Barber Locale that scopes DocumentTemplate to a languages/country Locale
- * @property [version] Increment for newer versions
  */
 data class DocumentTemplate(
+  /** Map of a Document output key to a template String value that can contain DocumentData input values */
   val fields: Map<String, String>,
+  /** KClass of DocumentData that can fill the templates in fields */
   val source: KClass<out DocumentData>,
+  /** Set of Documents that DocumentTemplate can render */
   val targets: Set<KClass<out Document>>,
+  /** Barber Locale that scopes DocumentTemplate to a languages/country Locale */
   val locale: Locale,
+  /** Increments for newer versions of the templates */
   val version: Long = 1
 ) {
   override fun toString(): String = """

@@ -20,7 +20,7 @@ import kotlin.reflect.KParameter
 data class CompiledDocumentTemplate(
   val fields: Table<String, KClass<out Document>, Mustache?>,
   val targets: Set<KClass<out Document>>,
-  val version: Long = 0
+  val version: Long
 ) {
   /** Return map of fieldName to set of Mustache codes in the field template */
   fun reducedFieldCodeMap() = fields.columnMap().values.map { fieldNameMustacheMap ->
@@ -60,8 +60,8 @@ data class CompiledDocumentTemplate(
         }
       }.reduce { acc, list -> acc + list }
           .toSet()
-          .fold(mapOf<KParameter, KClass<out Document>>()) { acc, (document, kParameter) ->
-            acc + mapOf(kParameter to document)
+          .associate { (document, kParameter) ->
+            kParameter to document
           }
       val targetFieldNames = targetKParameterDocumentMap.keys.map {
         it.name

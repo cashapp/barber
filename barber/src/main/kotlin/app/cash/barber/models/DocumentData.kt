@@ -69,22 +69,21 @@ interface DocumentData {
    * Lookup actual values for construction of proto using the dot separated full path from the
    * Barber Signature field keys
    */
-  private fun getDocumentDataValue(key: String): Any? {
-    val segments = key.split('.')
-    return segments.foldIndexed(this) { index, acc: Any?, segment ->
-      getValue(acc as Any, segment)?.let {
-        if (it::class.isData || index == segments.lastIndex) {
-          // Only recurse for data classes or return the final value
-          // Do not recurse on non-data classes
-          it
-        } else {
-          null
+  private fun getDocumentDataValue(key: String): Any? = key
+      .split('.')
+      .foldIndexed(this) { index, acc: Any?, segment ->
+        getValue(acc as Any, segment)?.let {
+          if (it::class.isData || index == key.split('.').lastIndex) {
+            // Only recurse for data classes or return the final value
+            // Do not recurse on non-data classes
+            it
+          } else {
+            null
+          }
         }
       }
-    }
-  }
 
-  private fun <T: Any>getValue(member: T, key: String): Any? {
+  private fun <T : Any> getValue(member: T, key: String): Any? {
     require(!key.contains('.')) { "key can not be a dot segmented path" }
     val memberProperties = member::class.memberProperties
     val kProperty = memberProperties.find { it.name == key }
