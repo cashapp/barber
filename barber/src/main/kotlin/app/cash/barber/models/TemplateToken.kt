@@ -25,5 +25,10 @@ data class TemplateToken(
       val token = firstLetter + rest
       return TemplateToken(token)
     }
+
+    fun app.cash.protos.barber.api.DocumentData.getTemplateToken(): TemplateToken =
+        TemplateToken(checkNotNull(template_token) {
+          "DocumentData template_token must be non-null"
+        })
   }
 }

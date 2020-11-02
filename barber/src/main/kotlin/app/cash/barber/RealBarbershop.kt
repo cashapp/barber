@@ -48,7 +48,9 @@ internal class RealBarbershop(
         """.trimMargin())
       }
       if (problems.isEmpty()) {
-        problems.add("Failed to get Barber<${documentClass.qualifiedName}>(templateToken=$templateToken), unknown error")
+        problems.add(
+            "Failed to get Barber<${documentClass.qualifiedName}>(templateToken=$templateToken), unknown error"
+        )
       }
 
       throw BarberException(problems)
@@ -64,6 +66,9 @@ internal class RealBarbershop(
       .filter { it.templateToken == templateToken }
       .map { it.document }
       .toSet()
+
+  override fun getTargetDocuments(documentData: app.cash.protos.barber.api.DocumentData): Set<KClass<out Document>> =
+      getTargetDocuments(TemplateToken(documentData.template_token!!))
 
   override fun getAllBarbers(): Map<BarberKey, Barber<Document>> = barbers
 

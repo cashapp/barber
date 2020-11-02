@@ -5,6 +5,7 @@ import app.cash.barber.models.BarberFieldEncoding
 import app.cash.barber.models.BarberKey
 import app.cash.barber.models.Document
 import app.cash.barber.models.TemplateToken
+import app.cash.protos.barber.api.DocumentData
 import app.cash.protos.barber.api.DocumentTemplate
 import kotlin.reflect.KClass
 
@@ -30,6 +31,9 @@ interface Barbershop {
 
   /** Get Documents that a templateToken targets */
   fun getTargetDocuments(templateToken: TemplateToken): Set<KClass<out Document>>
+
+  /** Get Documents that a templateToken targets */
+  fun getTargetDocuments(documentData: DocumentData): Set<KClass<out Document>>
 
   fun getAllBarbers(): Map<BarberKey, Barber<*>>
 
