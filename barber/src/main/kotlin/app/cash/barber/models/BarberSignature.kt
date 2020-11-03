@@ -63,6 +63,7 @@ data class BarberSignature(
         field.value_long != null -> Type.LONG
         field.value_duration != null -> Type.DURATION
         field.value_instant != null -> Type.INSTANT
+        field.value_null_type != null -> field.value_null_type
         // For cases where a DocumentData field in the template can be null, default to STRING
         else -> Type.STRING
       }
