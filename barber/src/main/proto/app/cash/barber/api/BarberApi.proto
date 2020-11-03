@@ -29,6 +29,12 @@ message DocumentData {
       int64 value_long = 3;
       google.protobuf.Duration value_duration = 4;
       google.protobuf.Timestamp value_instant = 5;
+      /*
+       * For Kotlin DocumentData converted to Proto that have a null value, this field can provide
+       * a hint for the type which otherwise would be unknown since null would show up as all other
+       * value fields as null
+       */
+      BarberSignature.Type value_null_type = 6;
       // TODO add amount to support Money
     }
   }

@@ -2,6 +2,7 @@ package app.cash.barber.models
 
 import app.cash.barber.examples.EmptyDocumentData
 import app.cash.barber.examples.NestedLoginCode
+import app.cash.barber.examples.NullableCashBalanceReceipt
 import app.cash.barber.examples.SenderReceipt
 import app.cash.barber.examples.TransactionalEmailDocument
 import app.cash.barber.examples.TransactionalSmsDocument
@@ -19,7 +20,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class BarberSignatureTest {
-  val mustacheFactory = DefaultMustacheFactory()
+  private val mustacheFactory = DefaultMustacheFactory()
 
   @Test
   fun `encode happy path`() {
@@ -311,7 +312,7 @@ class BarberSignatureTest {
   }
 
   @Test
-  fun `Default to String for null DocumentData Fields when Signature calculation is ambiguous`() {
+  fun `Use value_null_type or default to String for null DocumentData Fields when Signature calculation is ambiguous`() {
     val actual = DocumentData(
         template_token = "T_123",
         fields = listOf(
@@ -320,14 +321,38 @@ class BarberSignatureTest {
                 value_string = "non null"
             ),
             DocumentData.Field(
-                key = "bravo"
+                key = "bravo",
+                value_null_type = Type.DURATION
+            ),
+            DocumentData.Field(
+                key = "charlie"
             )
         )
     ).getBarberSignature()
     val expected = BarberSignature(mapOf(
         "alpha" to Type.STRING,
-        "bravo" to Type.STRING,
+        "bravo" to Type.DURATION,
+        "charlie" to Type.STRING,
     ))
     assertEquals(expected, actual)
+  }
+
+  @Test
+  fun `Kotlin DocumentData signature fills in value_null_type for null value`() {
+    val documentData = NullableCashBalanceReceipt(
+        amount = 50
+    )
+
+    val documentDataProto = documentData.toProto()
+    assertEquals(Type.LONG, documentDataProto.fields.last().value_null_type)
+    
+    val kotlinSignature = documentData.getBarberSignature()
+    val protoSignature = documentDataProto.getBarberSignature()
+    val expected = BarberSignature(mapOf(
+        "amount" to Type.LONG,
+        "cashBalance" to Type.LONG,
+    ))
+    assertEquals(expected, kotlinSignature)
+    assertEquals(expected, protoSignature)
   }
 }
