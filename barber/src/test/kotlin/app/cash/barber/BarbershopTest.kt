@@ -1,9 +1,12 @@
 package app.cash.barber
 
+import app.cash.barber.examples.MultiVersionDocumentTargetChangeDocumentData
 import app.cash.barber.examples.RecipientReceipt
 import app.cash.barber.examples.SenderReceipt
 import app.cash.barber.examples.TransactionalEmailDocument
 import app.cash.barber.examples.TransactionalSmsDocument
+import app.cash.barber.examples.multiVersionDocumentTarget_v4_email
+import app.cash.barber.examples.multiVersionDocumentTarget_v3_emailSms
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_CA
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_GB
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_US
@@ -115,5 +118,23 @@ class BarbershopTest {
         .build()
     val supportedDocuments = barbershop.getTargetDocuments<SenderReceipt>()
     assertThat(supportedDocuments).isEmpty()
+  }
+
+  @Test
+  fun `getTargetDocuments returns version aware targets`() {
+    val barbershop = BarbershopBuilder()
+        .installDocument<TransactionalEmailDocument>()
+        .installDocument<TransactionalSmsDocument>()
+        .installDocumentTemplate<MultiVersionDocumentTargetChangeDocumentData>(multiVersionDocumentTarget_v3_emailSms)
+        .installDocumentTemplate<MultiVersionDocumentTargetChangeDocumentData>(multiVersionDocumentTarget_v4_email)
+        .build()
+
+    val targetDocumentsLatestVersion = barbershop.getTargetDocuments<MultiVersionDocumentTargetChangeDocumentData>()
+    assertEquals(setOf(TransactionalEmailDocument::class), targetDocumentsLatestVersion)
+
+    val targetDocumentsVersion1 = barbershop.getTargetDocuments<MultiVersionDocumentTargetChangeDocumentData>(multiVersionDocumentTarget_v3_emailSms.version)
+    assertEquals(setOf(TransactionalEmailDocument::class, TransactionalSmsDocument::class), targetDocumentsVersion1)
+    val targetDocumentsVersion2 = barbershop.getTargetDocuments<MultiVersionDocumentTargetChangeDocumentData>(multiVersionDocumentTarget_v4_email.version)
+    assertEquals(setOf(TransactionalEmailDocument::class), targetDocumentsVersion2)
   }
 }

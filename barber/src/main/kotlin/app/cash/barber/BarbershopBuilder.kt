@@ -1,5 +1,7 @@
 package app.cash.barber
 
+import app.cash.barber.locale.Locale
+import app.cash.barber.locale.LocaleResolver
 import app.cash.barber.locale.MatchOrFirstLocaleResolver
 import app.cash.barber.models.BarberFieldEncoding
 import app.cash.barber.models.BarberKey
@@ -9,9 +11,8 @@ import app.cash.barber.models.CompiledDocumentTemplate
 import app.cash.barber.models.CompiledDocumentTemplate.Companion.compileAndValidate
 import app.cash.barber.models.CompiledDocumentTemplate.Companion.prettyPrint
 import app.cash.barber.models.Document
-import app.cash.barber.locale.Locale
-import app.cash.barber.locale.LocaleResolver
 import app.cash.barber.models.TemplateToken
+import app.cash.barber.models.VersionRange.Companion.asVersionRanges
 import app.cash.protos.barber.api.DocumentTemplate
 import com.google.common.collect.HashBasedTable
 import kotlin.reflect.KClass
@@ -200,12 +201,18 @@ class BarbershopBuilder : Barbershop.Builder {
 
   private fun Map<BuilderDocumentTemplateKey, DocumentTemplateDb>.asBarbershop(): Barbershop {
     val barbers = linkedMapOf<BarberKey, Barber<Document>>()
-    keys.map { it.templateToken }.toSet().map { templateToken ->
+    val templateLatestVersions = linkedMapOf<TemplateToken, Long>()
+    keys.map { it.templateToken }.toSet().forEach { templateToken ->
       val versions = filter { (it, _) -> templateToken == it.templateToken }
-      val documentTargets = versions.values
-          .map { it.compiledDocumentTemplate?.targets ?: setOf() }
-          .reduce { acc, set -> acc + set }
-          .toSet()
+
+      val documentTargets: MutableMap<KClass<out Document>, Set<Long>> = mutableMapOf()
+      versions.entries.forEach { (builderDocumentTemplateKey, documentTemplateDb) ->
+        documentTemplateDb.compiledDocumentTemplate?.targets?.forEach { target ->
+          documentTargets[target] =
+              (documentTargets[target] ?: setOf()) + setOf(builderDocumentTemplateKey.version)
+        }
+      }
+
       val localeVersionsMap: Map<RealBarber.DocumentTemplateKey, DocumentTemplateDb> =
           versions.entries.associate { (key, db) ->
             val (_, locale, sourceBarberSignature, version) = key
@@ -216,15 +223,21 @@ class BarbershopBuilder : Barbershop.Builder {
             ) to db
           }
 
-      documentTargets.forEach { document ->
-        barbers[BarberKey(templateToken, document)] = RealBarber(
-            document = document,
-            installedDocuments = installedDocuments,
-            installedDocumentTemplates = localeVersionsMap,
-            localeResolver = localeResolver
-        )
+      val latestVersion = versions.keys.map { it.version }.maxOrNull()
+      templateLatestVersions[templateToken] = latestVersion ?: -1
+
+      documentTargets.forEach { (document, versions) ->
+        if (versions.isNotEmpty()) {
+          barbers[BarberKey(templateToken, document)] = RealBarber(
+              document = document,
+              installedDocuments = installedDocuments,
+              installedDocumentTemplates = localeVersionsMap,
+              localeResolver = localeResolver,
+              supportedVersionRanges = versions.asVersionRanges()
+          )
+        }
       }
     }
-    return RealBarbershop(barbers = barbers, warnings = warnings)
+    return RealBarbershop(barbers = barbers, warnings = warnings, templateLatestVersions = templateLatestVersions)
   }
 }

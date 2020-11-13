@@ -5,11 +5,19 @@ import app.cash.barber.models.Document
 import app.cash.barber.models.DocumentData
 import app.cash.barber.models.TemplateToken
 import app.cash.barber.models.TemplateToken.Companion.getTemplateToken
+import app.cash.barber.models.VersionRange.Companion.supports
 import kotlin.reflect.KClass
 
 internal class RealBarbershop(
   private val barbers: Map<BarberKey, Barber<Document>>,
-  private val warnings: List<String>
+  private val warnings: List<String>,
+  /**
+   * The newest version of the TemplateToken, used to support Barbershop.getTargetDocuments when
+   * an explicit version is not specified. It is the latest version across all Barbers and at times
+   * may not even be supported by the Barber in the case of a newer version of a Document Template
+   * removing the Barber's Document target.
+   */
+  private val templateLatestVersions: Map<TemplateToken, Long>
 ) : Barbershop {
   @Suppress("UNCHECKED_CAST")
   override fun <DD : DocumentData, D : Document> getBarber(
@@ -59,15 +67,25 @@ internal class RealBarbershop(
   }
 
   override fun <DD : DocumentData> getTargetDocuments(
-    documentDataClass: KClass<out DD>
-  ): Set<KClass<out Document>> = getTargetDocuments(documentDataClass.getTemplateToken())
+    documentDataClass: KClass<out DD>,
+    version: Long?
+  ): Set<KClass<out Document>> = getTargetDocuments(documentDataClass.getTemplateToken(), version)
 
-  override fun getTargetDocuments(templateToken: TemplateToken): Set<KClass<out Document>> = barbers.keys
-      .filter { it.templateToken == templateToken }
-      .map { it.document }
-      .toSet()
+  override fun getTargetDocuments(
+    templateToken: TemplateToken,
+    version: Long?
+  ): Set<KClass<out Document>> = barbers.filter { (barberKey, barber) ->
+    barberKey.templateToken == templateToken &&
+        // If version is not explicitly specified, use latestTemplateVersionAcrossAllBarbers
+        barber.supportedVersionRanges.supports(version
+            ?: templateLatestVersions.getValue(barberKey.templateToken)
+        )
+  }.keys.map { it.document }.toSet()
 
-  override fun getTargetDocuments(documentData: app.cash.protos.barber.api.DocumentData): Set<KClass<out Document>> =
+  override fun getTargetDocuments(
+    documentData: app.cash.protos.barber.api.DocumentData,
+    version: Long?
+  ): Set<KClass<out Document>> =
       getTargetDocuments(TemplateToken(documentData.template_token!!))
 
   override fun getAllBarbers(): Map<BarberKey, Barber<Document>> = barbers

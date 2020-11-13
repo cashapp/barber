@@ -1,12 +1,16 @@
 package app.cash.barber
 
 import app.cash.barber.examples.EncodingTestDocument
+import app.cash.barber.examples.MultiVersionDocumentTargetChangeDocumentData
 import app.cash.barber.examples.InvestmentPurchase
 import app.cash.barber.examples.NestedLoginCode
 import app.cash.barber.examples.NullableSupportUrlReceipt
 import app.cash.barber.examples.RecipientReceipt
 import app.cash.barber.examples.TransactionalEmailDocument
 import app.cash.barber.examples.TransactionalSmsDocument
+import app.cash.barber.examples.multiVersionDocumentTargetChange
+import app.cash.barber.examples.multiVersionDocumentTarget_v4_email
+import app.cash.barber.examples.multiVersionDocumentTarget_v3_emailSms
 import app.cash.barber.examples.investmentPurchaseEncodingDocumentTemplateEN_US
 import app.cash.barber.examples.mcDonaldsInvestmentPurchase
 import app.cash.barber.examples.nullSupportUrlReceipt
@@ -15,16 +19,17 @@ import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_CA
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_GB
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_US
 import app.cash.barber.examples.sandy50Receipt
-import app.cash.barber.models.BarberSignature
-import app.cash.barber.models.DocumentTemplate
 import app.cash.barber.locale.Locale.Companion.EN_CA
 import app.cash.barber.locale.Locale.Companion.EN_GB
 import app.cash.barber.locale.Locale.Companion.EN_US
 import app.cash.barber.locale.Locale.Companion.ES_US
-import kotlin.test.assertEquals
+import app.cash.barber.models.BarberSignature
+import app.cash.barber.models.DocumentTemplate
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 /**
  * These our integration end to end tests
@@ -222,7 +227,8 @@ class BarberTest {
   fun `BarberField annotation configures Mustache render encoding per field`() {
     val barber = BarbershopBuilder()
         .installDocument<EncodingTestDocument>()
-        .installDocumentTemplate<InvestmentPurchase>(investmentPurchaseEncodingDocumentTemplateEN_US)
+        .installDocumentTemplate<InvestmentPurchase>(
+            investmentPurchaseEncodingDocumentTemplateEN_US)
         .build()
 
     val spec = barber.getBarber<InvestmentPurchase, EncodingTestDocument>()
@@ -242,9 +248,12 @@ class BarberTest {
   fun `Can install and render multiple versions`() {
     val key = recipientReceiptSmsDocumentTemplateEN_US.fields.keys.first()
     val field = recipientReceiptSmsDocumentTemplateEN_US.fields.values.first()
-    val v1 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "$field v1"), version = 1)
-    val v2 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "$field v2"), version = 2)
-    val v3 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "$field v3"), version = 3)
+    val v1 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "$field v1"),
+        version = 1)
+    val v2 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "$field v2"),
+        version = 2)
+    val v3 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "$field v3"),
+        version = 3)
 
     val barbershop = BarbershopBuilder()
         .installDocument<TransactionalSmsDocument>()
@@ -274,14 +283,19 @@ class BarberTest {
     val key = recipientReceiptSmsDocumentTemplateEN_US.fields.keys.first()
     val field = recipientReceiptSmsDocumentTemplateEN_US.fields.values.first()
 
-    val v1 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "New template with no fields v1"), version = 1)
+    val v1 = recipientReceiptSmsDocumentTemplateEN_US.copy(
+        fields = mapOf(key to "New template with no fields v1"), version = 1)
         .toProto()
         .copy(source_signature = "")
 
-    val v2 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "$field v2"), version = 2)
+    val v2 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "$field v2"),
+        version = 2)
 
-    val v3sourceSignature = BarberSignature(BarberSignature(v2.toProto().source_signature!!).fields + mapOf("new_variable_not_supported_yet" to app.cash.protos.barber.api.BarberSignature.Type.STRING))
-    val v3 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "$field {{ new_variable_not_supported_yet }} v3"), version = 3)
+    val v3sourceSignature = BarberSignature(
+        BarberSignature(v2.toProto().source_signature!!).fields + mapOf(
+            "new_variable_not_supported_yet" to app.cash.protos.barber.api.BarberSignature.Type.STRING))
+    val v3 = recipientReceiptSmsDocumentTemplateEN_US.copy(
+        fields = mapOf(key to "$field {{ new_variable_not_supported_yet }} v3"), version = 3)
         .toProto()
         .copy(source_signature = v3sourceSignature.signature)
 
@@ -317,14 +331,19 @@ class BarberTest {
     val key = recipientReceiptSmsDocumentTemplateEN_US.fields.keys.first()
     val field = recipientReceiptSmsDocumentTemplateEN_US.fields.values.first()
 
-    val v1 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "New template with no fields v1"), version = 1)
+    val v1 = recipientReceiptSmsDocumentTemplateEN_US.copy(
+        fields = mapOf(key to "New template with no fields v1"), version = 1)
         .toProto()
         .copy(source_signature = "")
 
-    val v2 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "$field v2"), version = 2)
+    val v2 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "$field v2"),
+        version = 2)
 
-    val v3sourceSignature = BarberSignature(BarberSignature(v2.toProto().source_signature!!).fields + mapOf("new_variable_not_supported_yet" to app.cash.protos.barber.api.BarberSignature.Type.STRING))
-    val v3 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "$field {{ new_variable_not_supported_yet }} v3"), version = 3)
+    val v3sourceSignature = BarberSignature(
+        BarberSignature(v2.toProto().source_signature!!).fields + mapOf(
+            "new_variable_not_supported_yet" to app.cash.protos.barber.api.BarberSignature.Type.STRING))
+    val v3 = recipientReceiptSmsDocumentTemplateEN_US.copy(
+        fields = mapOf(key to "$field {{ new_variable_not_supported_yet }} v3"), version = 3)
         .toProto()
         .copy(
             source_signature = v3sourceSignature.signature,
@@ -356,6 +375,66 @@ class BarberTest {
     assertEquals(
         "Sandy Winchester sent you \$50. It will be available at 2019-05-21T16:02:00Z. Cancel here: https://cash.app/cancel/123 v2",
         specMaxCompatible.sms_body)
+  }
+
+  @Test
+  fun `Barber render falls back on latest version it can support if document target removed in newer version`() {
+    val barbershop = BarbershopBuilder()
+        .installDocument<TransactionalEmailDocument>()
+        .installDocument<EncodingTestDocument>()
+        .installDocument<TransactionalSmsDocument>()
+        .installDocumentTemplate<MultiVersionDocumentTargetChangeDocumentData>(multiVersionDocumentTarget_v3_emailSms)
+        .installDocumentTemplate<MultiVersionDocumentTargetChangeDocumentData>(multiVersionDocumentTarget_v4_email)
+        .build()
+
+    val targetDocumentsVersion1 = barbershop.getTargetDocuments<MultiVersionDocumentTargetChangeDocumentData>(
+        multiVersionDocumentTarget_v3_emailSms.version)
+    assertEquals(setOf(TransactionalEmailDocument::class, TransactionalSmsDocument::class),
+        targetDocumentsVersion1)
+    val targetDocumentsVersion2 = barbershop.getTargetDocuments<MultiVersionDocumentTargetChangeDocumentData>(
+        multiVersionDocumentTarget_v4_email.version)
+    assertEquals(setOf(TransactionalEmailDocument::class), targetDocumentsVersion2)
+    val targetDocumentsDefaultVersion = barbershop.getTargetDocuments<MultiVersionDocumentTargetChangeDocumentData>()
+    assertEquals(setOf(TransactionalEmailDocument::class), targetDocumentsDefaultVersion)
+
+    // Check that these can all render successfully without throwing BarberException
+    val emailRendersWithDefaultVersion =
+        barbershop.getBarber<MultiVersionDocumentTargetChangeDocumentData, TransactionalEmailDocument>()
+            .render(multiVersionDocumentTargetChange, EN_US)
+    assertEquals("v4", emailRendersWithDefaultVersion.subject)
+    val emailRendersWithVersion3 =
+        barbershop.getBarber<MultiVersionDocumentTargetChangeDocumentData, TransactionalEmailDocument>()
+            .render(multiVersionDocumentTargetChange, EN_US, 3)
+    assertEquals("v3", emailRendersWithVersion3.subject)
+    val emailRendersWithVersion4 =
+        barbershop.getBarber<MultiVersionDocumentTargetChangeDocumentData, TransactionalEmailDocument>()
+            .render(multiVersionDocumentTargetChange, EN_US, 4)
+    assertEquals("v4", emailRendersWithVersion4.subject)
+
+    val smsRendersWithDefaultVersion =
+        barbershop.getBarber<MultiVersionDocumentTargetChangeDocumentData, TransactionalSmsDocument>()
+            .render(multiVersionDocumentTargetChange, EN_US)
+    assertEquals("v3", smsRendersWithDefaultVersion.sms_body)
+    val smsRendersWithVersion3 =
+        barbershop.getBarber<MultiVersionDocumentTargetChangeDocumentData, TransactionalSmsDocument>()
+            .render(multiVersionDocumentTargetChange, EN_US, 3)
+    assertEquals("v3", smsRendersWithVersion3.sms_body)
+    // Falls back to v3 since v4 doesn't support SMS
+    val smsRendersWithVersion4 =
+        barbershop.getBarber<MultiVersionDocumentTargetChangeDocumentData, TransactionalSmsDocument>()
+            .render(multiVersionDocumentTargetChange, EN_US, 4)
+    assertEquals("v3", smsRendersWithVersion4.sms_body)
+
+    // Blows up when trying to render template that doesn't have Document as Target
+    val exception = assertFailsWith<BarberException> {
+      barbershop.getBarber<MultiVersionDocumentTargetChangeDocumentData, EncodingTestDocument>()
+    }
+    assertEquals("""
+      |Errors
+      |1) Failed to get Barber<app.cash.barber.examples.EncodingTestDocument>(templateToken=multiVersionDocumentTargetChange)
+      |Document [class app.cash.barber.examples.EncodingTestDocument] is not installed in Barbershop
+      |
+    """.trimMargin(), exception.toString())
   }
 
   @Disabled @Test
