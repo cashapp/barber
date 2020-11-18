@@ -19,24 +19,34 @@ interface Barbershop {
     documentClass: KClass<out D>
   ): Barber<D>
 
-  /** Get barber that can handle dynamic DocumentData proto */
+  /** Get barber that the latest (or optionally a specific [version]) DocumentData proto targets */
   fun <D : Document> getBarber(
     templateToken: TemplateToken,
     documentClass: KClass<out D>
   ): Barber<D>
 
-  /** Get Documents that a DocumentData Kotlin data class targets */
-  fun <DD : app.cash.barber.models.DocumentData> getTargetDocuments(documentDataClass: KClass<out DD>):
-      Set<KClass<out Document>>
+  /** Get Documents that the latest (or optionally a specific [version]) DocumentData Kotlin data class targets */
+  fun <DD : app.cash.barber.models.DocumentData> getTargetDocuments(
+    documentDataClass: KClass<out DD>,
+    version: Long? = null
+  ): Set<KClass<out Document>>
 
-  /** Get Documents that a templateToken targets */
-  fun getTargetDocuments(templateToken: TemplateToken): Set<KClass<out Document>>
+  /** Get Documents that the latest (or optionally a specific [version]) TemplateToken targets */
+  fun getTargetDocuments(
+    templateToken: TemplateToken,
+    version: Long? = null
+  ): Set<KClass<out Document>>
 
-  /** Get Documents that a templateToken targets */
-  fun getTargetDocuments(documentData: DocumentData): Set<KClass<out Document>>
+  /** Get Documents that the latest (or optionally a specific [version]) TemplateToken targets */
+  fun getTargetDocuments(
+    documentData: DocumentData,
+    version: Long? = null
+  ): Set<KClass<out Document>>
 
+  /** Get all Barbers installed and validated in the Barbershop */
   fun getAllBarbers(): Map<BarberKey, Barber<*>>
 
+  /** Get any Warnings raised from initial install and validation */
   fun getWarnings(): List<String>
 
   interface Builder {
@@ -86,5 +96,5 @@ inline fun <reified DD : app.cash.barber.models.DocumentData, reified D : Docume
 inline fun <reified D : Document> Barbershop.getBarber(templateToken: TemplateToken) = getBarber(
     templateToken, D::class)
 
-inline fun <reified DD : app.cash.barber.models.DocumentData> Barbershop.getTargetDocuments() = getTargetDocuments(
-    DD::class)
+inline fun <reified DD : app.cash.barber.models.DocumentData> Barbershop.getTargetDocuments(version: Long? = null) =
+    getTargetDocuments(documentDataClass = DD::class, version = version)

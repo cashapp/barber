@@ -5,6 +5,8 @@ import app.cash.barber.locale.LocaleResolver
 import app.cash.barber.models.BarberSignature
 import app.cash.barber.models.BarberSignature.Companion.getBarberSignature
 import app.cash.barber.models.Document
+import app.cash.barber.models.VersionRange
+import app.cash.barber.models.VersionRange.Companion.supports
 import app.cash.protos.barber.api.DocumentData
 import com.github.mustachejava.Mustache
 import com.google.common.collect.HashBasedTable
@@ -17,7 +19,8 @@ internal class RealBarber<D : Document>(
   private val document: KClass<out D>,
   private val installedDocuments: Table<BarberSignature, String, BarbershopBuilder.DocumentDb>,
   private val installedDocumentTemplates: Map<DocumentTemplateKey, BarbershopBuilder.DocumentTemplateDb>,
-  private val localeResolver: LocaleResolver
+  private val localeResolver: LocaleResolver,
+  override val supportedVersionRanges: Set<VersionRange>
 ) : Barber<D> {
   internal data class DocumentTemplateKey(
     val locale: Locale,
@@ -28,15 +31,10 @@ internal class RealBarber<D : Document>(
   override fun <DD : app.cash.barber.models.DocumentData> render(
     documentData: DD,
     locale: Locale,
-    version: Long
-  ): D =
-      render(documentData.toProto(), locale, version)
+    version: Long?
+  ): D = render(documentData.toProto(), locale, version)
 
-  override fun render(
-    documentData: DocumentData,
-    locale: Locale,
-    version: Long
-  ): D {
+  override fun render(documentData: DocumentData, locale: Locale, version: Long?): D {
     val documentDataMap = documentData.fields.associate { field ->
       val value = extractAndFormatFieldValue(field)
       field.key!! to value
@@ -44,10 +42,13 @@ internal class RealBarber<D : Document>(
 
     val documentDataSignature = documentData.getBarberSignature()
 
-    // Only allow locale lookup on installed versions that can be satisfied by the provided DocumentData
     val compatibleLocaleVersions =
         installedDocumentTemplates.filter { (it, _) ->
+          // Only allow locale lookup on installed versions that can be satisfied by the provided DocumentData
           documentDataSignature.canSatisfy(it.sourceBarberSignature)
+        }.filter { (key, _) ->
+          // Only allow locale lookup on versions that can be satisfied by this specific Barber and target Document
+          supportedVersionRanges.supports(key.version)
         }
 
     // Choose a Locale based on available installed versions
@@ -60,8 +61,8 @@ internal class RealBarber<D : Document>(
     val versionsForLocale = localeResolver.resolve(locale, localeLookupTable)
 
     // Resolve exact version or latest compatible based on DocumentData BarberSignature
-    val documentTemplateDB = versionsForLocale[version]
-        ?: versionsForLocale.maxByOrNull { it.key }?.value
+    val documentTemplateDB = versionsForLocale[version ?: supportedVersionRanges
+        .maxByOrNull { it.max }?.max] ?: versionsForLocale.maxByOrNull { it.key }?.value
     val compiledDocumentTemplate = documentTemplateDB?.compiledDocumentTemplate
         ?: throw BarberException(errors = listOf("""
             |RealBarber unable to find a DocumentTemplate version that matches the input DocumentData signature 
