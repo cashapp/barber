@@ -4,6 +4,10 @@ See the [project website][barber] for documentation and APIs.
 
 A type safe Kotlin JVM library for building up localized, fillable, themed documents using [Mustache](https://mustache.github.io) templating.
 
+# Press
+
+- [Meet Barber💈: the best way to manage your Mustache](https://cashapp.github.io/2020-11-04/meet-barber)
+
 # Why?
 
 An application will often have hundreds of user viewable strings to power UI, notifications, emails, and other text based user interactions.
