@@ -1,5 +1,7 @@
-Releasing
+Manual Releasing Steps
 =========
+
+These should generally not be needed but are kept here for posterity. The CI auto-releasing in Github Actions should be sufficient, and is documented in the `Releasing` doc.
 
 ### Prerequisite: Sonatype (Maven Central) Account
 
