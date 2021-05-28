@@ -14,6 +14,7 @@ import app.cash.barber.examples.investmentPurchaseEncodingDocumentTemplateEN_US
 import app.cash.barber.examples.investmentPurchaseShadowEncodingDocumentTemplateEN_US
 import app.cash.barber.examples.mcDonaldsInvestmentPurchase
 import app.cash.barber.examples.noParametersDocumentTemplate
+import app.cash.barber.examples.noTargetsDocumentTemplate
 import app.cash.barber.examples.plaintextDocumentTemplateEN_US
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_CA
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_GB
@@ -69,6 +70,14 @@ class BarbershopBuilderTest {
         .installDocument<TransactionalEmailDocument>()
         .installDocument<TransactionalSmsDocument>()
         .build()
+  }
+
+  @Test
+  fun `Install works when DocumentTemplate has no targets`() {
+    BarbershopBuilder()
+      .installDocument<TransactionalSmsDocument>()
+      .installDocumentTemplate<EmptyDocumentData>(noTargetsDocumentTemplate)
+      .build()
   }
 
   @Test

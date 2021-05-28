@@ -54,15 +54,19 @@ data class CompiledDocumentTemplate(
       val explicitSourceSignature = BarberSignature(source_signature!!)
 
       // Common projections for the following validation
-      val targetKParameterDocumentMap = target_signatures.map { signature ->
-        installedDocuments.row(BarberSignature(signature)).values.map {
-          it.document to it.kParameter
-        }
-      }.reduce { acc, list -> acc + list }
+      val targetKParameterDocumentMap = if (target_signatures.isEmpty()) {
+        emptyMap()
+      } else {
+        target_signatures.map { signature ->
+          installedDocuments.row(BarberSignature(signature)).values.map {
+            it.document to it.kParameter
+          }
+        }.reduce { acc, list -> acc + list }
           .toSet()
           .associate { (document, kParameter) ->
             kParameter to document
           }
+      }
       val targetFieldNames = targetKParameterDocumentMap.keys.map {
         it.name
       }
