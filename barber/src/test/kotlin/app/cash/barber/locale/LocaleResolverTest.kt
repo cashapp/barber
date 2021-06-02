@@ -108,15 +108,22 @@ class LocaleResolverTest {
   fun `LocaleResolver works with a Guava Table`() {
     val resolver = MapleSyrupOrFirstLocaleResolver()
     val table = HashBasedTable.create<Locale, Long, DocumentTemplate>()
-    table.put(EN_US, 1, DocumentTemplate(template_token = "t1"))
-    table.put(EN_US, 2, DocumentTemplate(template_token = "t2"))
-    table.put(EN_CA, 1, DocumentTemplate(template_token = "t3"))
-    table.put(EN_CA, 2, DocumentTemplate(template_token = "t4"))
+    val templateToken = "t1"
+    val alpha = DocumentTemplate(template_token = templateToken)
+    val bravo = DocumentTemplate(template_token = templateToken)
+    val charlie = DocumentTemplate(template_token = templateToken)
+    val delta = DocumentTemplate(template_token = templateToken)
+
+    table.put(EN_US, 1, alpha)
+    table.put(EN_US, 2, bravo)
+    table.put(EN_CA, 1, charlie)
+    table.put(EN_CA, 2, delta)
+
     val expectedMap = mapOf(
-        1L to DocumentTemplate(template_token = "t3"),
-        2L to DocumentTemplate(template_token = "t4")
+        1L to charlie,
+        2L to delta
     )
-    assertThat(resolver.resolve(EN_US, table)).containsAllEntriesOf(expectedMap)
+    assertThat(resolver.resolve(EN_US, table, templateToken)).containsAllEntriesOf(expectedMap)
   }
 
   @Test
@@ -124,11 +131,11 @@ class LocaleResolverTest {
     val resolver = MapleSyrupOrFirstLocaleResolver()
     val table = HashBasedTable.create<Locale, Long, DocumentTemplate>()
     val exception = assertFailsWith<BarberException> {
-      resolver.resolve(EN_US, table)
+      resolver.resolve(EN_US, table, "alpha")
     }
     assertEquals(exception.toString(), """
       |Errors
-      |1) Can not resolve entry of an empty Table.
+      |1) Can not resolve entry of an empty Table [templateToken=alpha].
       |
     """.trimMargin())
   }

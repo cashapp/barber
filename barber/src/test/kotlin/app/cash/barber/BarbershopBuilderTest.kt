@@ -72,6 +72,32 @@ class BarbershopBuilderTest {
   }
 
   @Test
+  fun `Fails when DocumentTemplate has no target Documents`() {
+    val exception = assertFailsWith<BarberException> {
+      BarbershopBuilder()
+        .installDocumentTemplate(
+          recipientReceiptSmsEmailDocumentTemplateEN_US.toProto().copy(
+            target_signatures = listOf()
+          )
+        )
+        .installDocumentTemplate<InvestmentPurchase>(
+          investmentPurchaseEncodingDocumentTemplateEN_US)
+        .installDocument<EncodingTestDocument>()
+        .build()
+    }
+    assertEquals(
+      """
+      |Errors
+      |1) DocumentTemplate must have one or more target Documents, target_signatures is empty. 
+      |DocumentTemplate: [templateToken=recipientReceipt][locale=en-US][version=1] 
+      |
+      """.trimMargin(),
+      exception.toString()
+    )
+  }
+
+
+  @Test
   fun `Fails when DocumentTemplate target Documents are not installed`() {
     val exception = assertFailsWith<BarberException> {
       BarbershopBuilder()
