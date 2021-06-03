@@ -58,7 +58,8 @@ internal class RealBarber<D : Document>(
       localeLookupTable.put(documentTemplateKey.locale, documentTemplateKey.version,
           documentTemplateDb)
     }
-    val versionsForLocale = localeResolver.resolve(locale, localeLookupTable)
+    val templateToken = documentData.template_token!!
+    val versionsForLocale = localeResolver.resolve(locale, localeLookupTable, templateToken)
 
     // Resolve exact version or latest compatible based on DocumentData BarberSignature
     val documentTemplateDB = versionsForLocale[version ?: supportedVersionRanges

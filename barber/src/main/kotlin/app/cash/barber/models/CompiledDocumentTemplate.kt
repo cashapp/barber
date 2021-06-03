@@ -53,6 +53,17 @@ data class CompiledDocumentTemplate(
 
       val explicitSourceSignature = BarberSignature(source_signature!!)
 
+      // DocumentTemplate must target one or more Documents
+      if (target_signatures.isEmpty()) {
+        errors.add("""
+        |DocumentTemplate must have one or more target Documents, target_signatures is empty. 
+        |${this.prettyPrint()} 
+        """.trimMargin())
+      }
+
+      BarberException.maybeThrowBarberException(errors = errors, warnings = warnings,
+        warningsAsErrors = warningsAsErrors)
+
       // Common projections for the following validation
       val targetKParameterDocumentMap = target_signatures.map { signature ->
         installedDocuments.row(BarberSignature(signature)).values.map {
