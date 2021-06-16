@@ -43,6 +43,19 @@ subprojects {
     }
   }
 
+  configurations {
+    val apiElements by getting {
+      attributes {
+        attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 8)
+      }
+    }
+    val runtimeElements by getting {
+      attributes {
+        attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 8)
+      }
+    }
+  }
+
   tasks.withType<JavaCompile> {
     sourceCompatibility = JavaVersion.VERSION_1_8.toString()
     targetCompatibility = JavaVersion.VERSION_1_8.toString()
