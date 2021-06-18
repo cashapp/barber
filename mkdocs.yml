@@ -1,7 +1,7 @@
 site_name: Barber
 repo_name: Barber
 repo_url: https://github.com/cashapp/barber
-site_description: "A Barber"
+site_description: "Barber"
 site_author: Square, Inc.
 remote_branch: gh-pages
 

@@ -28,7 +28,6 @@ subprojects {
   apply(plugin = "org.jetbrains.dokka")
   // TODO bring back once Kotlin 1.4 trailing commas are supported
   //  apply(plugin = "com.diffplug.gradle.spotless")
-  apply(plugin = "com.squareup.wire")
 
   val compileKotlin by tasks.getting(KotlinCompile::class) {
     kotlinOptions {

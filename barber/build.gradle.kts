@@ -7,6 +7,8 @@ val jar by tasks.getting(Jar::class) {
 }
 
 dependencies {
+  api(project(":barber-protos"))
+
   implementation(Dependencies.guava)
   implementation(Dependencies.kotlinStdLib)
   implementation(Dependencies.kotlinReflection)
@@ -21,13 +23,6 @@ dependencies {
   testImplementation(Dependencies.junitApi)
   testImplementation(Dependencies.junitEngine)
   testImplementation(Dependencies.kotlinTest)
-}
-
-wire {
-  protoLibrary = true
-  kotlin {
-    javaInterop = true
-  }
 }
 
 afterEvaluate {
