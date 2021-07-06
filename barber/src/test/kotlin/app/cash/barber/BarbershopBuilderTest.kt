@@ -18,6 +18,7 @@ import app.cash.barber.examples.plaintextDocumentTemplateEN_US
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_CA
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_GB
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_US
+import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_USV2
 import app.cash.barber.examples.recipientReceiptSmsEmailDocumentTemplateEN_US
 import app.cash.barber.examples.senderReceiptEmailDocumentTemplateEN_US
 import app.cash.barber.models.BarberFieldEncoding
@@ -37,6 +38,7 @@ class BarbershopBuilderTest {
     BarbershopBuilder()
         .installDocument<TransactionalSmsDocument>()
         .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
+        .setWarningsAsErrors()
         .build()
   }
 
@@ -45,6 +47,7 @@ class BarbershopBuilderTest {
     BarbershopBuilder()
         .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
         .installDocument<TransactionalSmsDocument>()
+        .setWarningsAsErrors()
         .build()
   }
 
@@ -55,6 +58,7 @@ class BarbershopBuilderTest {
         .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_CA)
         .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_GB)
         .installDocument<TransactionalSmsDocument>()
+        .setWarningsAsErrors()
         .build()
   }
 
@@ -68,6 +72,7 @@ class BarbershopBuilderTest {
         .installDocument<EncodingTestDocument>()
         .installDocument<TransactionalEmailDocument>()
         .installDocument<TransactionalSmsDocument>()
+        .setWarningsAsErrors()
         .build()
   }
 
@@ -148,6 +153,7 @@ class BarbershopBuilderTest {
         ))
         .installDocument<TransactionalEmailDocument>()
         .installDocument<TransactionalSmsDocument>()
+        .setWarningsAsErrors()
         .build()
   }
 
@@ -317,6 +323,30 @@ class BarbershopBuilderTest {
         barber.getTargetDocuments(InvestmentPurchase::class.getTemplateToken()))
     assertEquals(setOf(ShadowPlaintextDocument::class),
         barber.getTargetDocuments(SenderReceipt::class.getTemplateToken()))
+  }
+
+  @Test
+  fun `Barbershop respects version parameter`() {
+    val barber = BarbershopBuilder()
+      .installDocument<TransactionalSmsDocument>()
+      .installDocument<ShadowPlaintextDocument>()
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_US)
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_USV2)
+      .setWarningsAsErrors()
+      .build()
+
+    val templateToken = RecipientReceipt::class.getTemplateToken()
+    val documentData = app.cash.protos.barber.api.DocumentData(
+      template_token = templateToken.token
+    )
+
+    val v1ExpectedDocs = setOf(TransactionalSmsDocument::class)
+    assertEquals(v1ExpectedDocs, barber.getTargetDocuments(documentData, 1))
+    assertEquals(v1ExpectedDocs, barber.getTargetDocuments(templateToken, 1))
+
+    val v2ExpectedDocs = setOf(TransactionalSmsDocument::class, ShadowPlaintextDocument::class)
+    assertEquals(v2ExpectedDocs, barber.getTargetDocuments(documentData, 2))
+    assertEquals(v2ExpectedDocs, barber.getTargetDocuments(templateToken, 2))
   }
 
   @Test

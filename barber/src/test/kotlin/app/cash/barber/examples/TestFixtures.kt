@@ -14,6 +14,17 @@ val recipientReceiptSmsDocumentTemplateEN_US = DocumentTemplate(
     locale = EN_US
 )
 
+val recipientReceiptSmsDocumentTemplateEN_USV2 = DocumentTemplate(
+    fields = mapOf(
+        "sms_body" to "{{sender}} sent you {{amount}} USD. It will be available at {{ deposit_expected_at }} UTC. Cancel here: {{ cancelUrl }}",
+        "plaintext_field" to "{{sender}} sent you {{amount}} USD. It will be available at {{ deposit_expected_at }} UTC. Cancel here: {{ cancelUrl }}"
+    ),
+    source = RecipientReceipt::class,
+    targets = setOf(TransactionalSmsDocument::class, ShadowPlaintextDocument::class),
+    locale = EN_US,
+    version = 2
+)
+
 val plaintextDocumentTemplateEN_US = DocumentTemplate(
     fields = mapOf(
         "plaintext_field" to "{{recipient}} sent you {{amount}}. It will be available at {{ deposit_expected_at }}. Cancel here: {{ cancelUrl }}"
