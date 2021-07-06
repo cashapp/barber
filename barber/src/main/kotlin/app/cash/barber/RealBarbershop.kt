@@ -2,10 +2,10 @@ package app.cash.barber
 
 import app.cash.barber.models.BarberKey
 import app.cash.barber.models.Document
-import app.cash.barber.models.DocumentData
 import app.cash.barber.models.TemplateToken
 import app.cash.barber.models.TemplateToken.Companion.getTemplateToken
 import app.cash.barber.models.VersionRange.Companion.supports
+import app.cash.protos.barber.api.DocumentData
 import kotlin.reflect.KClass
 
 internal class RealBarbershop(
@@ -20,7 +20,7 @@ internal class RealBarbershop(
   private val templateLatestVersions: Map<TemplateToken, Long>
 ) : Barbershop {
   @Suppress("UNCHECKED_CAST")
-  override fun <DD : DocumentData, D : Document> getBarber(
+  override fun <DD : app.cash.barber.models.DocumentData, D : Document> getBarber(
     documentDataClass: KClass<out DD>,
     documentClass: KClass<out D>
   ): Barber<D> = getBarber(documentDataClass.getTemplateToken(), documentClass)
@@ -66,7 +66,7 @@ internal class RealBarbershop(
     return barber as Barber<D>
   }
 
-  override fun <DD : DocumentData> getTargetDocuments(
+  override fun <DD : app.cash.barber.models.DocumentData> getTargetDocuments(
     documentDataClass: KClass<out DD>,
     version: Long?
   ): Set<KClass<out Document>> = getTargetDocuments(documentDataClass.getTemplateToken(), version)
@@ -83,10 +83,13 @@ internal class RealBarbershop(
   }.keys.map { it.document }.toSet()
 
   override fun getTargetDocuments(
-    documentData: app.cash.protos.barber.api.DocumentData,
+    documentData: DocumentData,
     version: Long?
   ): Set<KClass<out Document>> =
-      getTargetDocuments(TemplateToken(documentData.template_token!!))
+      getTargetDocuments(
+        TemplateToken(documentData.template_token!!),
+        version
+      )
 
   override fun getAllBarbers(): Map<BarberKey, Barber<Document>> = barbers
 
