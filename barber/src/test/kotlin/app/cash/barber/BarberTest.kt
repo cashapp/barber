@@ -25,6 +25,7 @@ import app.cash.barber.locale.Locale.Companion.EN_US
 import app.cash.barber.locale.Locale.Companion.ES_US
 import app.cash.barber.models.BarberSignature
 import app.cash.barber.models.DocumentTemplate
+import app.cash.barber.version.SpecifiedOrNewestCompatibleVersionResolver
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
@@ -304,6 +305,7 @@ class BarberTest {
         .installDocumentTemplate(v1)
         .installDocumentTemplate(v2.toProto())
         .installDocumentTemplate(v3)
+        .setVersionResolver(SpecifiedOrNewestCompatibleVersionResolver)
         .build()
 
     val recipientReceiptSms = barbershop.getBarber<RecipientReceipt, TransactionalSmsDocument>()
@@ -355,6 +357,7 @@ class BarberTest {
         .installDocumentTemplate(v1)
         .installDocumentTemplate(v2.toProto())
         .installDocumentTemplate(v3)
+        .setVersionResolver(SpecifiedOrNewestCompatibleVersionResolver)
         .build()
 
     val recipientReceiptSms = barbershop.getBarber<RecipientReceipt, TransactionalSmsDocument>()
@@ -378,6 +381,62 @@ class BarberTest {
   }
 
   @Test
+  fun `Can install multiple versions and incompatible version throws`() {
+    val key = recipientReceiptSmsDocumentTemplateEN_US.fields.keys.first()
+    val field = recipientReceiptSmsDocumentTemplateEN_US.fields.values.first()
+
+    val v1 = recipientReceiptSmsDocumentTemplateEN_US.copy(
+      fields = mapOf(key to "New template with no fields v1"), version = 1)
+      .toProto()
+      .copy(source_signature = "")
+
+    val v2 = recipientReceiptSmsDocumentTemplateEN_US.copy(fields = mapOf(key to "$field v2"),
+      version = 2)
+
+    val v3sourceSignature = BarberSignature(
+      BarberSignature(v2.toProto().source_signature!!).fields + mapOf(
+        "new_variable_not_supported_yet" to app.cash.protos.barber.api.BarberSignature.Type.STRING))
+    val v3 = recipientReceiptSmsDocumentTemplateEN_US.copy(
+      fields = mapOf(key to "$field {{ new_variable_not_supported_yet }} v3"), version = 3)
+      .toProto()
+      .copy(
+        source_signature = v3sourceSignature.signature,
+        locale = ES_US.locale
+      )
+
+    val barbershop = BarbershopBuilder()
+      .installDocument<TransactionalSmsDocument>()
+      .installDocumentTemplate(v1)
+      .installDocumentTemplate(v2.toProto())
+      .installDocumentTemplate(v3)
+      .build()
+
+    val recipientReceiptSms = barbershop.getBarber<RecipientReceipt, TransactionalSmsDocument>()
+
+    val specV1 = recipientReceiptSms.render(sandy50Receipt, ES_US, 1)
+    assertEquals(
+      "New template with no fields v1",
+      specV1.sms_body)
+    val specV2 = recipientReceiptSms.render(sandy50Receipt, ES_US, 2)
+    assertEquals(
+      "Sandy Winchester sent you \$50. It will be available at 2019-05-21T16:02:00Z. Cancel here: https://cash.app/cancel/123 v2",
+      specV2.sms_body)
+    val incompatibleVersionException = assertFailsWith<BarberException> {
+      recipientReceiptSms.render(sandy50Receipt, ES_US, 3)
+    }
+    assertEquals("""
+      |Errors
+      |1) Unable to resolve compatible DocumentTemplate [version=3] for [templateToken=recipientReceipt]
+      |[compatibleOptions=[1, 2]]
+      |
+    """.trimMargin(), incompatibleVersionException.toString())
+    val specMaxCompatible = recipientReceiptSms.render(sandy50Receipt, ES_US)
+    assertEquals(
+      "Sandy Winchester sent you \$50. It will be available at 2019-05-21T16:02:00Z. Cancel here: https://cash.app/cancel/123 v2",
+      specMaxCompatible.sms_body)
+  }
+
+  @Test
   fun `Barber render falls back on latest version it can support if document target removed in newer version`() {
     val barbershop = BarbershopBuilder()
         .installDocument<TransactionalEmailDocument>()
@@ -385,6 +444,7 @@ class BarberTest {
         .installDocument<TransactionalSmsDocument>()
         .installDocumentTemplate<MultiVersionDocumentTargetChangeDocumentData>(multiVersionDocumentTarget_v3_emailSms)
         .installDocumentTemplate<MultiVersionDocumentTargetChangeDocumentData>(multiVersionDocumentTarget_v4_email)
+        .setVersionResolver(SpecifiedOrNewestCompatibleVersionResolver)
         .build()
 
     val targetDocumentsVersion1 = barbershop.getTargetDocuments<MultiVersionDocumentTargetChangeDocumentData>(
@@ -435,6 +495,29 @@ class BarberTest {
       |Document [class app.cash.barber.examples.EncodingTestDocument] is not installed in Barbershop
       |
     """.trimMargin(), exception.toString())
+  }
+
+  @Test
+  fun `Barber render throws if document target removed in newer version`() {
+    val barbershop = BarbershopBuilder()
+      .installDocument<TransactionalEmailDocument>()
+      .installDocument<EncodingTestDocument>()
+      .installDocument<TransactionalSmsDocument>()
+      .installDocumentTemplate<MultiVersionDocumentTargetChangeDocumentData>(multiVersionDocumentTarget_v3_emailSms)
+      .installDocumentTemplate<MultiVersionDocumentTargetChangeDocumentData>(multiVersionDocumentTarget_v4_email)
+      .build()
+
+    // Throws since v4 doesn't support SMS
+    val incompatibleVersionException = assertFailsWith<BarberException> {
+      barbershop.getBarber<MultiVersionDocumentTargetChangeDocumentData, TransactionalSmsDocument>()
+        .render(multiVersionDocumentTargetChange, EN_US, 4)
+    }
+    assertEquals("""
+      |Errors
+      |1) Unable to resolve compatible DocumentTemplate [version=4] for [templateToken=multiVersionDocumentTargetChange]
+      |[compatibleOptions=[3]]
+      |
+    """.trimMargin(), incompatibleVersionException.toString())
   }
 
   @Disabled @Test

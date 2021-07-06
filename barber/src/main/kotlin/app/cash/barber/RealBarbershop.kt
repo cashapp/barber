@@ -4,7 +4,7 @@ import app.cash.barber.models.BarberKey
 import app.cash.barber.models.Document
 import app.cash.barber.models.TemplateToken
 import app.cash.barber.models.TemplateToken.Companion.getTemplateToken
-import app.cash.barber.models.VersionRange.Companion.supports
+import app.cash.barber.version.VersionRange.Companion.supports
 import app.cash.protos.barber.api.DocumentData
 import kotlin.reflect.KClass
 

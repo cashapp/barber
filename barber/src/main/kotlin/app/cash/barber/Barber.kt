@@ -2,7 +2,7 @@ package app.cash.barber
 
 import app.cash.barber.models.Document
 import app.cash.barber.locale.Locale
-import app.cash.barber.models.VersionRange
+import app.cash.barber.version.VersionRange
 import app.cash.protos.barber.api.DocumentData
 
 /**

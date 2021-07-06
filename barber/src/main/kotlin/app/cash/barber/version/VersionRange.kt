@@ -1,4 +1,4 @@
-package app.cash.barber.models
+package app.cash.barber.version
 
 data class VersionRange(
   val min: Long,

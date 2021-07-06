@@ -1,7 +1,7 @@
-package app.cash.barber.models
+package app.cash.barber.version
 
-import app.cash.barber.models.VersionRange.Companion.supports
-import app.cash.barber.models.VersionRange.Companion.asVersionRanges
+import app.cash.barber.version.VersionRange.Companion.asVersionRanges
+import app.cash.barber.version.VersionRange.Companion.supports
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
