@@ -5,8 +5,9 @@ import app.cash.barber.locale.LocaleResolver
 import app.cash.barber.models.BarberSignature
 import app.cash.barber.models.BarberSignature.Companion.getBarberSignature
 import app.cash.barber.models.Document
-import app.cash.barber.models.VersionRange
-import app.cash.barber.models.VersionRange.Companion.supports
+import app.cash.barber.version.VersionRange
+import app.cash.barber.version.VersionRange.Companion.supports
+import app.cash.barber.version.VersionResolver
 import app.cash.protos.barber.api.DocumentData
 import com.github.mustachejava.Mustache
 import com.google.common.collect.HashBasedTable
@@ -20,7 +21,8 @@ internal class RealBarber<D : Document>(
   private val installedDocuments: Table<BarberSignature, String, BarbershopBuilder.DocumentDb>,
   private val installedDocumentTemplates: Map<DocumentTemplateKey, BarbershopBuilder.DocumentTemplateDb>,
   private val localeResolver: LocaleResolver,
-  override val supportedVersionRanges: Set<VersionRange>
+  override val supportedVersionRanges: Set<VersionRange>,
+  private val versionResolver: VersionResolver,
 ) : Barber<D> {
   internal data class DocumentTemplateKey(
     val locale: Locale,
@@ -62,13 +64,16 @@ internal class RealBarber<D : Document>(
     val versionsForLocale = localeResolver.resolve(locale, localeLookupTable, templateToken)
 
     // Resolve exact version or latest compatible based on DocumentData BarberSignature
-    val documentTemplateDB = versionsForLocale[version ?: supportedVersionRanges
-        .maxByOrNull { it.max }?.max] ?: versionsForLocale.maxByOrNull { it.key }?.value
-    val compiledDocumentTemplate = documentTemplateDB?.compiledDocumentTemplate
+    val resolvedVersion = versionResolver.resolve(
+      version = version,
+      compatibleOptions = versionsForLocale.keys,
+      templateToken = templateToken
+    )
+    val documentTemplateDB = versionsForLocale[resolvedVersion]!!
+    val compiledDocumentTemplate = documentTemplateDB.compiledDocumentTemplate
         ?: throw BarberException(errors = listOf("""
-            |RealBarber unable to find a DocumentTemplate version that matches the input DocumentData signature 
-            |DocumentData Signature: $documentDataSignature
-            |""".trimMargin()))
+          |Unexpected illegal state [templateToken=$templateToken][version=$resolvedVersion] is missing CompiledDocumentTemplate
+          |""".trimMargin()))
 
     // Render each field of DocumentTemplate with passed in DocumentData context
     // Some of these fields now will be null since any missing fields will have been added with null values
@@ -79,8 +84,8 @@ internal class RealBarber<D : Document>(
             }
 
     // Zips the KParameters with corresponding rendered values from DocumentTemplate
-    val parameters =
-        installedDocuments.row(document.getBarberSignature()).map { (fieldName, documentDB) ->
+    val parameters = installedDocuments
+      .row(document.getBarberSignature()).map { (fieldName, documentDB) ->
           documentDB.kParameter to when {
             renderedDocumentTemplateFields.containsKey(fieldName) -> {
               renderedDocumentTemplateFields.getValue(fieldName)

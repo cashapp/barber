@@ -5,6 +5,7 @@ import app.cash.barber.models.BarberFieldEncoding
 import app.cash.barber.models.BarberKey
 import app.cash.barber.models.Document
 import app.cash.barber.models.TemplateToken
+import app.cash.barber.version.VersionResolver
 import app.cash.protos.barber.api.DocumentData
 import app.cash.protos.barber.api.DocumentTemplate
 import kotlin.reflect.KClass
@@ -69,6 +70,12 @@ interface Barbershop {
      * installed template.
      */
     fun setLocaleResolver(resolver: LocaleResolver): Builder
+
+    /**
+     * Configures this Barbershop to use [VersionResolver] to resolve which template version to use.
+     * By default Barber resolves the newest compatible version.
+     */
+    fun setVersionResolver(resolver: VersionResolver): Builder
 
     /**
      * Configures this Barbershop to treat warnings as errors during validataion. By default,

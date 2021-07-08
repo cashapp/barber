@@ -12,7 +12,9 @@ import app.cash.barber.models.CompiledDocumentTemplate.Companion.compileAndValid
 import app.cash.barber.models.CompiledDocumentTemplate.Companion.prettyPrint
 import app.cash.barber.models.Document
 import app.cash.barber.models.TemplateToken
-import app.cash.barber.models.VersionRange.Companion.asVersionRanges
+import app.cash.barber.version.SpecifiedThrowOrNewestCompatibleVersionResolver
+import app.cash.barber.version.VersionRange.Companion.asVersionRanges
+import app.cash.barber.version.VersionResolver
 import app.cash.protos.barber.api.DocumentTemplate
 import com.google.common.collect.HashBasedTable
 import kotlin.reflect.KClass
@@ -50,6 +52,7 @@ class BarbershopBuilder : Barbershop.Builder {
 
   private var mustacheFactoryProvider = BarberMustacheFactoryProvider()
   private var localeResolver: LocaleResolver = MatchOrFirstLocaleResolver
+  private var versionResolver: VersionResolver = SpecifiedThrowOrNewestCompatibleVersionResolver
   private var warningsAsErrors: Boolean = false
   private val warnings = mutableListOf<String>()
 
@@ -122,6 +125,10 @@ class BarbershopBuilder : Barbershop.Builder {
 
   override fun setLocaleResolver(resolver: LocaleResolver): Barbershop.Builder = apply {
     localeResolver = resolver
+  }
+
+  override fun setVersionResolver(resolver: VersionResolver): Barbershop.Builder = apply {
+    versionResolver = resolver
   }
 
   override fun setWarningsAsErrors(): Barbershop.Builder = apply {
@@ -233,7 +240,8 @@ class BarbershopBuilder : Barbershop.Builder {
               installedDocuments = installedDocuments,
               installedDocumentTemplates = localeVersionsMap,
               localeResolver = localeResolver,
-              supportedVersionRanges = versions.asVersionRanges()
+              supportedVersionRanges = versions.asVersionRanges(),
+              versionResolver = versionResolver,
           )
         }
       }
