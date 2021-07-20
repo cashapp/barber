@@ -14,7 +14,7 @@ object Dependencies {
   val kotlinGradlePlugin = "org.jetbrains.kotlin:kotlin-gradle-plugin:1.3.71"
   val kotlinReflection = "org.jetbrains.kotlin:kotlin-reflect:1.3.71"
   val kotlinScriptRuntime = "org.jetbrains.kotlin:kotlin-script-runtime:1.3.71"
-  val kotlinStdLib = "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.71"
+  val kotlinStdLibJdk8 = "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.71"
   val kotlinTest = "org.jetbrains.kotlin:kotlin-test:1.3.71"
   val ktlintVersion = "0.34.2"
   val loggingApi = "io.github.microutils:kotlin-logging:1.7.9"
