@@ -273,7 +273,7 @@ Determining based on a Locale passed in at render which installed Locale to rend
 It is a simple interface that looks like this:
 
 ```kotlin
-interface LocaleResolver {
+abstract class LocaleResolver {
   /**
    * @return a [Locale] from the given [options]
    * @param [options] must be valid keys for a Locale keyed Map
@@ -282,14 +282,44 @@ interface LocaleResolver {
 }
 ```
 
-Barber comes with a very simple `MatchOrFirstLocaleResolver` that attempts to resolve the requested Locale exactly, and otherwise fallsback to the first installed Locale.
+Barber comes with a very simple `MatchOrFirstLocaleResolver` that attempts to resolve the requested Locale exactly, and otherwise chooses the first installed Locale.
 
-For more complex resolving algorithms, you can set your own custom `LocaleResolver` when building your Barbershop.
+For more complex resolution algorithms, you can set your own custom `LocaleResolver` when building your Barbershop.
 
 ```kotlin
 val barbershop = BarbershopBuilder()
   // ...
-  .setLocaleResolver(MapleSyrupOrFirstLocaleResolver()) // Always tries to resolve EN_CA
+  .setLocaleResolver(MapleSyrupOrFirstLocaleResolver) // Always tries to resolve EN_CA
+  .build()
+```
+
+# Version Compatibility & Resolution
+
+Barber supports installation of multiple versions of the same template. When Barber is used in a service that stores in a database versioned templates, the following capabilities drastically improve the safety, reliability, and functionality of rendering versioned templates.
+
+For example, Barber can handle variable additions, subtractions, and changes between versions. For example, if a template has a new variable added, the corresponding DocumentData class will also have a new field.
+
+```kotlin
+// git diff of the new version of the DocumentData
+data class RecipientReceipt(
+  val sender: String,
+  val amount: String,
++  val recipient: String,
+) : DocumentData
+```
+
+Assuming a microservice environment where old clients could exist sending the old DocumentData missing the new field, Barber does the right thing and falls back to the newest, compatible template to render.
+
+Compatibility in this case refers to ensuring that the signature (variables and types) of the DocumentData provided can fulfill the chosen template.
+
+[By default](https://github.com/cashapp/barber/blob/master/barber/src/main/kotlin/app/cash/barber/version/SpecifiedThrowOrNewestCompatibleVersionResolver.kt), Barber chooses the newest compatible version, or throws an exception if a version is explicitly provided that does not exist or is incompatible.
+
+For more complex resolution algorithms, you can set your own custom `VersionResolver` when building your Barbershop.
+
+```kotlin
+val barbershop = BarbershopBuilder()
+  // ...
+  .setVersionResolver(SpecifiedOrNewestCompatibleVersionResolver) // Always returns newest compatible version, ignores explicitly provided version
   .build()
 ```
 
