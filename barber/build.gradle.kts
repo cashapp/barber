@@ -10,7 +10,7 @@ dependencies {
   api(project(":barber-protos"))
 
   implementation(Dependencies.guava)
-  implementation(Dependencies.kotlinStdLib)
+  implementation(Dependencies.kotlinStdLibJdk8)
   implementation(Dependencies.kotlinReflection)
   implementation(Dependencies.moshiCore)
   implementation(Dependencies.moshiKotlin)
