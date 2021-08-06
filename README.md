@@ -20,7 +20,7 @@ This leads to many questions about the how to achieve the desired functionality 
 - What if we want to pass around not just a single template string, but a collection of template strings for more complex documents?
   - How could we support emails that have a subject, body, recipient, primary button...?
 - What about different languages? 
-    - Could the same unique data blob could be used to support templates in different languages?
+    - Could the same unique data blob be used to support templates in different languages?
 - What about time or money that differ between countries that even share the same language (ie. 12 vs 24 hour time)? 
   - How could that formatting localization be provided?
  
