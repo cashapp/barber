@@ -64,7 +64,11 @@ class BarbershopBuilder : Barbershop.Builder {
     val locale = Locale(documentTemplate.locale!!)
     val fieldErrors = documentTemplate.fields.mapNotNull { field ->
       if (field.key == null || field.template == null) {
-        "Field has null key or template\n${documentTemplate.prettyPrint()}\n${field.prettyPrint()}"
+        """
+          |Field has null key or template
+          |${documentTemplate.prettyPrint()}
+          |${field.prettyPrint()}
+        """.trimMargin()
       } else {
         null
       }
