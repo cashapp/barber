@@ -3,13 +3,13 @@ package app.cash.barber.models
 import app.cash.barber.BarberException
 import app.cash.barber.BarberMustacheFactoryProvider
 import app.cash.barber.BarbershopBuilder
+import app.cash.barber.api.prettyPrint
 import app.cash.protos.barber.api.DocumentTemplate
 import com.github.mustachejava.Mustache
 import com.google.common.collect.HashBasedTable
 import com.google.common.collect.Table
 import java.io.StringReader
 import kotlin.reflect.KClass
-import kotlin.reflect.KParameter
 
 /**
  * An intermediary data class used in processing [DocumentTemplate] that permits for null values in
@@ -190,8 +190,6 @@ data class CompiledDocumentTemplate(
 
       return compiledDocumentTemplate
     }
-
-    fun DocumentTemplate.prettyPrint() = "DocumentTemplate: [templateToken=$template_token][locale=$locale][version=$version]"
 
     /** Returns values from a Map as an aggregated set */
     fun Map<*, Set<String>>.reduceToValuesSet(): Set<String> =

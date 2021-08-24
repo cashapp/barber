@@ -1,5 +1,7 @@
 package app.cash.barber
 
+import app.cash.barber.BarberException.Companion.maybeThrowBarberException
+import app.cash.barber.api.prettyPrint
 import app.cash.barber.locale.Locale
 import app.cash.barber.locale.LocaleResolver
 import app.cash.barber.locale.MatchOrFirstLocaleResolver
@@ -9,7 +11,6 @@ import app.cash.barber.models.BarberSignature
 import app.cash.barber.models.BarberSignature.Companion.getBarberSignature
 import app.cash.barber.models.CompiledDocumentTemplate
 import app.cash.barber.models.CompiledDocumentTemplate.Companion.compileAndValidate
-import app.cash.barber.models.CompiledDocumentTemplate.Companion.prettyPrint
 import app.cash.barber.models.Document
 import app.cash.barber.models.TemplateToken
 import app.cash.barber.version.SpecifiedThrowOrNewestCompatibleVersionResolver
@@ -61,6 +62,14 @@ class BarbershopBuilder : Barbershop.Builder {
     val signature = BarberSignature(documentTemplate.source_signature!!)
     val version = documentTemplate.version!!
     val locale = Locale(documentTemplate.locale!!)
+    val fieldErrors = documentTemplate.fields.mapNotNull { field ->
+      if (field.key == null || field.template == null) {
+        "Field has null key or template\n${documentTemplate.prettyPrint()}\n${field.prettyPrint()}"
+      } else {
+        null
+      }
+    }
+    maybeThrowBarberException(fieldErrors, emptyList(), false)
 
     val versions =
         installedDocumentTemplates.filter { (it, _) -> templateToken == it.templateToken && locale == it.locale }
@@ -183,7 +192,7 @@ class BarbershopBuilder : Barbershop.Builder {
       }
     }
 
-    BarberException.maybeThrowBarberException(errors = errors, warnings = warnings,
+    maybeThrowBarberException(errors = errors, warnings = warnings,
         warningsAsErrors = warningsAsErrors)
 
     // Compile DocumentTemplates and perform initial validation
@@ -200,7 +209,7 @@ class BarbershopBuilder : Barbershop.Builder {
       installedDocumentTemplates[key] = db.copy(compiledDocumentTemplate = compiledDocumentTemplate)
     }
 
-    BarberException.maybeThrowBarberException(errors = errors, warnings = warnings,
+    maybeThrowBarberException(errors = errors, warnings = warnings,
         warningsAsErrors = warningsAsErrors)
 
     return installedDocumentTemplates
