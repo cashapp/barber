@@ -62,18 +62,6 @@ class BarbershopBuilder : Barbershop.Builder {
     val signature = BarberSignature(documentTemplate.source_signature!!)
     val version = documentTemplate.version!!
     val locale = Locale(documentTemplate.locale!!)
-    val fieldErrors = documentTemplate.fields.mapNotNull { field ->
-      if (field.key == null || field.template == null) {
-        """
-          |Field has null key or template
-          |${documentTemplate.prettyPrint()}
-          |${field.prettyPrint()}
-        """.trimMargin()
-      } else {
-        null
-      }
-    }
-    maybeThrowBarberException(fieldErrors, emptyList(), false)
 
     val versions =
         installedDocumentTemplates.filter { (it, _) -> templateToken == it.templateToken && locale == it.locale }

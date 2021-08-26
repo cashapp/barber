@@ -29,6 +29,7 @@ import app.cash.barber.version.SpecifiedOrNewestCompatibleVersionResolver
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -67,17 +68,11 @@ class BarberTest {
     )
     val barber = BarbershopBuilder().installDocument<TransactionalSmsDocument>()
 
-    val exception = assertThrows<BarberException> {
-      barber.installDocumentTemplate(documentTemplateWithInvalidField)
-    }
+    barber.installDocumentTemplate(documentTemplateWithInvalidField)
 
-    assertEquals("""
-      |Errors
-      |1) Field has null key or template
-      |DocumentTemplate: [templateToken=recipientReceipt][locale=en-US][version=1]
-      |Field: [key=sms_body][template=null]
-      |
-    """.trimMargin(), exception.toString())
+    assertDoesNotThrow {
+      barber.build()
+    }
   }
 
   @Test

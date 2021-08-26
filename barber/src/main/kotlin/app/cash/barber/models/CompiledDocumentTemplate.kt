@@ -9,6 +9,7 @@ import com.github.mustachejava.Mustache
 import com.google.common.collect.HashBasedTable
 import com.google.common.collect.Table
 import java.io.StringReader
+import java.util.Optional
 import kotlin.reflect.KClass
 
 /**
@@ -18,14 +19,14 @@ import kotlin.reflect.KClass
  *  [Document] (even for [Document] keys that are nullable) and improve Mustache execution runtime.
  */
 data class CompiledDocumentTemplate(
-  val fields: Table<String, KClass<out Document>, Mustache?>,
+  val fields: Table<String, KClass<out Document>, Optional<Mustache>>,
   val targets: Set<KClass<out Document>>,
   val version: Long
 ) {
   /** Return map of fieldName to set of Mustache codes in the field template */
   fun reducedFieldCodeMap() = fields.columnMap().values.map { fieldNameMustacheMap ->
-    fieldNameMustacheMap.mapValues { (_, template: Mustache?) ->
-      template?.codes?.mapNotNull { it.name }?.toSet() ?: setOf()
+    fieldNameMustacheMap.mapValues { (_, template: Optional<Mustache>) ->
+      template.getNullable()?.codes?.mapNotNull { it.name }?.toSet() ?: setOf()
     }
   }.let {
     if (it.isNotEmpty()) {
@@ -128,10 +129,10 @@ data class CompiledDocumentTemplate(
       // Compile the DocumentTemplate to enable further validation
       // fieldName, Document, Mustache used to render the field
       val documentTemplateFields =
-          HashBasedTable.create<String, KClass<out Document>, Mustache?>()
+          HashBasedTable.create<String, KClass<out Document>, Optional<Mustache>>()
       fields.map { field ->
         val fieldName = field.key!!
-        val fieldValue = field.template!!
+        val fieldValue = field.template
         installedDocuments.column(fieldName).keys
             .filter { signature ->
               // Only add documents to table where the signature can be satisfied by the template
@@ -144,10 +145,12 @@ data class CompiledDocumentTemplate(
               val barberField = installedDocuments.get(signature, fieldName).kParameter
                   .annotations
                   .firstOrNull { it is BarberField } as BarberField?
-              val mustache = mustacheFactoryProvider.get(barberField?.encoding)
-                  .compile(StringReader(fieldValue), fieldValue)
+              val mustache = fieldValue?.let { nonNullFieldValue ->
+                mustacheFactoryProvider.get(barberField?.encoding)
+                  .compile(StringReader(nonNullFieldValue), nonNullFieldValue)
+              }
               val document = installedDocuments.row(signature)[fieldName]!!.document
-              documentTemplateFields.put(fieldName, document, mustache)
+              documentTemplateFields.put(fieldName, document, Optional.ofNullable(mustache))
             }
       }
 
