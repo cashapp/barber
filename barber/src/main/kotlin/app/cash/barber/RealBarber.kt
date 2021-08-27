@@ -5,7 +5,6 @@ import app.cash.barber.locale.LocaleResolver
 import app.cash.barber.models.BarberSignature
 import app.cash.barber.models.BarberSignature.Companion.getBarberSignature
 import app.cash.barber.models.Document
-import app.cash.barber.models.getNullable
 import app.cash.barber.version.VersionRange
 import app.cash.barber.version.VersionRange.Companion.supports
 import app.cash.barber.version.VersionResolver
@@ -81,7 +80,7 @@ internal class RealBarber<D : Document>(
     val renderedDocumentTemplateFields: Map<String, String?> =
         compiledDocumentTemplate.fields.column(document)
             .mapValues {
-              it.value.value.renderMustache(documentDataMap)
+              it.value.template.renderMustache(documentDataMap)
             }
 
     // Zips the KParameters with corresponding rendered values from DocumentTemplate
