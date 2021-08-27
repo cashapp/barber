@@ -29,11 +29,13 @@ import app.cash.barber.version.SpecifiedOrNewestCompatibleVersionResolver
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
+import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 /**
- * These our integration end to end tests
+ * These are integration end to end tests
  */
 class BarberTest {
   @Test
@@ -51,6 +53,26 @@ class BarberTest {
             sms_body = "Sandy Winchester sent you \$50. It will be available at 2019-05-21T16:02:00Z. Cancel here: https://cash.app/cancel/123"
         )
     )
+  }
+
+  @Test
+  fun `Can install template with null field values`() {
+    val documentTemplate = recipientReceiptSmsDocumentTemplateEN_US.toProto()
+    val documentTemplateWithInvalidField = documentTemplate.copy(
+      fields = documentTemplate.fields.map { app.cash.protos.barber.api.DocumentTemplate.Field(
+        key = it.key,
+        template = null
+      ) }
+        // Sort this so that the exception message is ordered for easier asserting
+        .sortedBy { it.key }
+    )
+    val barber = BarbershopBuilder().installDocument<TransactionalSmsDocument>()
+
+    barber.installDocumentTemplate(documentTemplateWithInvalidField)
+
+    assertDoesNotThrow {
+      barber.build()
+    }
   }
 
   @Test

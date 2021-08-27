@@ -26,7 +26,7 @@ package app.cash.barber
 class BarberException(
   val errors: List<String> = listOf(),
   val warnings: List<String> = listOf()
-) : IllegalStateException() {
+) : IllegalStateException(toString()) {
   override fun toString(): String {
     val errorText = if (errors.isNotEmpty()) {
       """

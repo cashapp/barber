@@ -80,7 +80,7 @@ internal class RealBarber<D : Document>(
     val renderedDocumentTemplateFields: Map<String, String?> =
         compiledDocumentTemplate.fields.column(document)
             .mapValues {
-              it.value.renderMustache(documentDataMap)
+              it.value.template.renderMustache(documentDataMap)
             }
 
     // Zips the KParameters with corresponding rendered values from DocumentTemplate
