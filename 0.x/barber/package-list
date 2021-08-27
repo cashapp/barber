@@ -1,0 +1,9 @@
+$dokka.format:gfm
+$dokka.linkExtension:md
+$dokka.location:app.cash.barber.api$prettyPrint(app.cash.protos.barber.api.DocumentTemplate)app.cash.barber.api/app.cash.protos.barber.api.-document-template/pretty-print.md
+$dokka.location:app.cash.barber.models$mapToMaps(kotlin.collections.Iterable((app.cash.barber.models.mapToMaps.T)), kotlin.Function1((app.cash.barber.models.mapToMaps.T, kotlin.collections.Map((app.cash.barber.models.mapToMaps.K, app.cash.barber.models.mapToMaps.V)))))app.cash.barber.models/kotlin.collections.-iterable/map-to-maps.md
+app.cash.barber
+app.cash.barber.api
+app.cash.barber.locale
+app.cash.barber.models
+app.cash.barber.version
