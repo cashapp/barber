@@ -9,7 +9,6 @@ import com.github.mustachejava.Mustache
 import com.google.common.collect.HashBasedTable
 import com.google.common.collect.Table
 import java.io.StringReader
-import java.util.Optional
 import kotlin.reflect.KClass
 
 /**
@@ -19,14 +18,18 @@ import kotlin.reflect.KClass
  *  [Document] (even for [Document] keys that are nullable) and improve Mustache execution runtime.
  */
 data class CompiledDocumentTemplate(
-  val fields: Table<String, KClass<out Document>, Optional<Mustache>>,
+  val fields: Table<String, KClass<out Document>, Nullable<Mustache>>,
   val targets: Set<KClass<out Document>>,
   val version: Long
 ) {
+  data class Nullable<T>(
+    val value: T?
+  )
+
   /** Return map of fieldName to set of Mustache codes in the field template */
   fun reducedFieldCodeMap() = fields.columnMap().values.map { fieldNameMustacheMap ->
-    fieldNameMustacheMap.mapValues { (_, template: Optional<Mustache>) ->
-      template.getNullable()?.codes?.mapNotNull { it.name }?.toSet() ?: setOf()
+    fieldNameMustacheMap.mapValues { (_, template: Nullable<Mustache>) ->
+      template.value?.codes?.mapNotNull { it.name }?.toSet() ?: setOf()
     }
   }.let {
     if (it.isNotEmpty()) {
@@ -129,7 +132,7 @@ data class CompiledDocumentTemplate(
       // Compile the DocumentTemplate to enable further validation
       // fieldName, Document, Mustache used to render the field
       val documentTemplateFields =
-          HashBasedTable.create<String, KClass<out Document>, Optional<Mustache>>()
+          HashBasedTable.create<String, KClass<out Document>, Nullable<Mustache>>()
       fields.map { field ->
         val fieldName = field.key!!
         val fieldValue = field.template
@@ -150,7 +153,7 @@ data class CompiledDocumentTemplate(
                   .compile(StringReader(nonNullFieldValue), nonNullFieldValue)
               }
               val document = installedDocuments.row(signature)[fieldName]!!.document
-              documentTemplateFields.put(fieldName, document, Optional.ofNullable(mustache))
+              documentTemplateFields.put(fieldName, document, Nullable(mustache))
             }
       }
 
