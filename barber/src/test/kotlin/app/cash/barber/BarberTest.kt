@@ -56,7 +56,7 @@ class BarberTest {
   }
 
   @Test
-  fun `Cannot install template with null field values`() {
+  fun `Can install template with null field values`() {
     val documentTemplate = recipientReceiptSmsDocumentTemplateEN_US.toProto()
     val documentTemplateWithInvalidField = documentTemplate.copy(
       fields = documentTemplate.fields.map { app.cash.protos.barber.api.DocumentTemplate.Field(
