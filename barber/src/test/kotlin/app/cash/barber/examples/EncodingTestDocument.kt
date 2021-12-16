@@ -14,5 +14,7 @@ data class EncodingTestDocument(
   @BarberField(encoding = BarberFieldEncoding.STRING_HTML)
   val html_field: String,
   @BarberField(encoding = BarberFieldEncoding.STRING_PLAINTEXT)
-  val plaintext_field: String
+  val plaintext_field: String,
+  @BarberField(encoding = BarberFieldEncoding.STRING_HTTPURL)
+  val url_field: String,
 ) : Document

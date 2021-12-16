@@ -15,6 +15,7 @@ dependencies {
   implementation(Dependencies.moshiCore)
   implementation(Dependencies.moshiKotlin)
   implementation(Dependencies.okio)
+  implementation(Dependencies.okHttp)
   implementation(Dependencies.mustacheCompiler)
   implementation(Dependencies.wireMoshiAdapter)
   implementation(Dependencies.wireRuntime)

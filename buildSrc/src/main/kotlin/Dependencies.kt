@@ -22,6 +22,7 @@ object Dependencies {
   val moshiCore = "com.squareup.moshi:moshi:1.11.0"
   val moshiKotlin = "com.squareup.moshi:moshi-kotlin:1.11.0"
   val mustacheCompiler = "com.github.spullara.mustache.java:compiler:0.9.5"
+  val okHttp = "com.squareup.okhttp3:okhttp:4.10.0-RC1"
   val okio = "com.squareup.okio:okio:2.5.0"
   val shadowJarPlugin = "com.github.jengelman.gradle.plugins:shadow:5.1.0"
   val spotlessPlugin = "com.diffplug.spotless:spotless-plugin-gradle:3.25.0"
