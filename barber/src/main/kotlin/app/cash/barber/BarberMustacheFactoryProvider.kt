@@ -12,8 +12,10 @@ class BarberMustacheFactoryProvider(
 ) {
   private val defaultMustacheFactory = DefaultMustacheFactory()
   private val barberPlaintextMustacheFactory = BarberPlaintextMustacheFactory()
+  private val barberHttpUrlMustacheFactory = BarberHttpUrlMustacheFactory()
   fun get(encoding: BarberFieldEncoding? = null) = when (encoding ?: defaultBarberFieldEncoding) {
     BarberFieldEncoding.STRING_PLAINTEXT -> barberPlaintextMustacheFactory
     BarberFieldEncoding.STRING_HTML -> defaultMustacheFactory
+    BarberFieldEncoding.STRING_HTTPURL -> barberHttpUrlMustacheFactory
   }
 }
