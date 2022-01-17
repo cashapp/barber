@@ -12,7 +12,14 @@ import java.io.Writer
  */
 class BarberHttpUrlMustacheFactory : DefaultMustacheFactory() {
   override fun encode(value: String?, writer: Writer?) {
-    value?.let { writer?.write(it.toHttpUrl().toString()) }
-      ?: throw MustacheException("Null Writer. Failed to encode value: $value")
+    value?.let {
+      val schema = value.split("://").first()
+
+      // Permit non https schemas to support deep links
+      val forEncoding = "https://" + value.split("://").last()
+      val encodedWithoutSchema = forEncoding.toHttpUrl().toString().removePrefix("https")
+
+      writer?.write(schema + encodedWithoutSchema)
+    } ?: throw MustacheException("Null Writer. Failed to encode value: $value")
   }
 }

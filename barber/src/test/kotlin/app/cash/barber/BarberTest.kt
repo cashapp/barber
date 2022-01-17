@@ -276,6 +276,32 @@ class BarberTest {
   }
 
   @Test
+  fun `BarberField HttpUrl supports deeplink non-https schema`() {
+    val barber = BarbershopBuilder()
+      .installDocument<EncodingTestDocument>()
+      .installDocumentTemplate<InvestmentPurchase>(
+        investmentPurchaseEncodingDocumentTemplateEN_US
+      )
+      .build()
+
+    val deepLinkUrl = "cashme://cash.app/f/test/123abc"
+    val spec = barber.getBarber<InvestmentPurchase, EncodingTestDocument>()
+      .render(mcDonaldsInvestmentPurchase.copy(
+        url = deepLinkUrl
+      ), EN_US)
+
+    assertThat(spec).isEqualTo(
+      EncodingTestDocument(
+        no_annotation_field = "You purchased 100 shares of McDonald&#39;s.",
+        default_field = "You purchased 100 shares of McDonald&#39;s.",
+        html_field = "You purchased 100 shares of McDonald&#39;s.",
+        plaintext_field = "You purchased 100 shares of McDonald's.",
+        url_field = deepLinkUrl,
+      )
+    )
+  }
+
+  @Test
   fun `Can install and render multiple versions`() {
     val key = recipientReceiptSmsDocumentTemplateEN_US.fields.keys.first()
     val field = recipientReceiptSmsDocumentTemplateEN_US.fields.values.first()
