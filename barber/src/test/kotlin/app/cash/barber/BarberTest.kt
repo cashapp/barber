@@ -276,6 +276,33 @@ class BarberTest {
   }
 
   @Test
+  fun `BarberField URL annotation escapes if field is not valid URL`() {
+    val barber = BarbershopBuilder()
+      .installDocument<EncodingTestDocument>()
+      .installDocumentTemplate<InvestmentPurchase>(
+        investmentPurchaseEncodingDocumentTemplateEN_US
+      )
+      .build()
+
+    val invalidUrlDocumentData = mcDonaldsInvestmentPurchase.copy(
+      url = "<body>not a url</body>"
+    )
+
+    val spec = barber.getBarber<InvestmentPurchase, EncodingTestDocument>()
+      .render(invalidUrlDocumentData, EN_US)
+
+    assertThat(spec).isEqualTo(
+      EncodingTestDocument(
+        no_annotation_field = "You purchased 100 shares of McDonald&#39;s.",
+        default_field = "You purchased 100 shares of McDonald&#39;s.",
+        html_field = "You purchased 100 shares of McDonald&#39;s.",
+        plaintext_field = "You purchased 100 shares of McDonald's.",
+        url_field = "&lt;body&gt;not a url&lt;/body&gt;",
+      )
+    )
+  }
+
+  @Test
   fun `Can install and render multiple versions`() {
     val key = recipientReceiptSmsDocumentTemplateEN_US.fields.keys.first()
     val field = recipientReceiptSmsDocumentTemplateEN_US.fields.values.first()

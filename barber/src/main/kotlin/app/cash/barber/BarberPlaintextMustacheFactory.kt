@@ -11,7 +11,9 @@ import java.io.Writer
  */
 class BarberPlaintextMustacheFactory : DefaultMustacheFactory() {
   override fun encode(value: String?, writer: Writer?) {
-    value?.let { writer?.write(it) }
-      ?: throw MustacheException("Null Writer. Failed to encode value: $value")
+    value?.let {
+      writer?.write(it)
+        ?: throw MustacheException("Null Writer. Failed to encode value: $value")
+    }
   }
 }
