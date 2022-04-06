@@ -38,7 +38,7 @@ interface LocaleResolver {
   ): Map<S, T> = when {
     table.isEmpty -> {
       // Usage in Barber prevents the empty case from happening
-      throw BarberException(errors = listOf("Can not resolve entry of an empty Table [templateToken=$templateToken][locale=$locale]."))
+      throw BarberException(errors = listOf("Can not resolve entry of an empty Table [templateToken=$templateToken][locale=${locale.locale}]."))
     }
     table.containsRow(resolve(locale, table.rowKeySet(), templateToken)) -> {
       table.row(resolve(locale, table.rowKeySet(), templateToken))
