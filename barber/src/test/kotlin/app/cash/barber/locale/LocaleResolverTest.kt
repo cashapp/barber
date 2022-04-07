@@ -135,7 +135,7 @@ class LocaleResolverTest {
     }
     assertEquals(exception.toString(), """
       |Errors
-      |1) Can not resolve entry of an empty Table [templateToken=alpha].
+      |1) Can not resolve entry of an empty Table [templateToken=alpha][locale=en-US].
       |
     """.trimMargin())
   }

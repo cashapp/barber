@@ -26,33 +26,11 @@ package app.cash.barber
 class BarberException(
   val errors: List<String> = listOf(),
   val warnings: List<String> = listOf()
-) : IllegalStateException(toString()) {
+) : IllegalStateException(generateMessage(errors, warnings)) {
+
   override fun toString(): String {
-    val errorText = if (errors.isNotEmpty()) {
-      """
-      |Errors
-      |${errors.sanitize()}
-      """.trimMargin()
-    } else ""
-    val warningText = if (warnings.isNotEmpty()) {
-      """
-      |Warnings
-      |${warnings.sanitize()}
-      """.trimMargin()
-    } else ""
-
-    return if (errors.isEmpty() && warnings.isEmpty()) {
-      "Unknown BarberException"
-    } else if (errors.isNotEmpty() && warnings.isNotEmpty()) {
-      errorText + "\n" + warningText
-    } else {
-      errorText + warningText
-    }
+    return generateMessage(errors, warnings)
   }
-
-  private fun List<String>.sanitize(): String = map { it.replace("$", "::") }
-    .mapIndexed { index, s -> "${index + 1}) $s\n" }
-    .joinToString("\n")
 
   companion object {
     /**
@@ -64,5 +42,35 @@ class BarberException(
         throw BarberException(errors = errors, warnings = warnings)
       }
     }
+
+    private fun generateMessage(errors: List<String>, warnings: List<String>): String {
+      val exceptionSections = listOf(
+          formatExceptionSection("Errors", errors),
+          formatExceptionSection("Warnings", warnings)
+      )
+
+      val exceptionMessage = exceptionSections
+          .filter { it.isNotEmpty() }
+          .joinToString("\n")
+
+      return exceptionMessage.ifEmpty {
+        "Unknown BarberException"
+      }
+    }
+
+    private fun formatExceptionSection(sectionTitle: String, entries: List<String>): String {
+      return if (entries.isEmpty()) {
+        ""
+      } else {
+        """
+        |$sectionTitle
+        |${entries.sanitize()}
+        """.trimMargin()
+      }
+    }
+
+    private fun List<String>.sanitize(): String = map { it.replace("$", "::") }
+        .mapIndexed { index, s -> "${index + 1}) $s\n" }
+        .joinToString("\n")
   }
 }
