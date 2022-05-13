@@ -1,5 +1,6 @@
 object Dependencies {
   val assertj = "org.assertj:assertj-core:3.15.0"
+  val dokkaGradlePlugin = "org.jetbrains.dokka:dokka-gradle-plugin:1.6.10"
   val guava = "com.google.guava:guava:28.2-jre"
   val guice = "com.google.inject:guice:4.2.3"
   val guiceMultibindings = "com.google.inject.extensions:guice-multibindings:4.2.3"
