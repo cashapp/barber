@@ -1,4 +1,3 @@
-// Auto-generated from polyrepo's master-dependencies.json. Update via polyrepo dep-add and polyrepo dep-upgrade.
 object Dependencies {
   val assertj = "org.assertj:assertj-core:3.15.0"
   val guava = "com.google.guava:guava:28.2-jre"
@@ -31,4 +30,3 @@ object Dependencies {
   val wireMoshiAdapter = "com.squareup.wire:wire-moshi-adapter:3.7.0"
   val wireRuntime = "com.squareup.wire:wire-runtime:3.7.0"
 }
-// Auto-generated from polyrepo's master-dependencies.json. Update via polyrepo dep-add and polyrepo dep-upgrade.
