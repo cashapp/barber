@@ -17,7 +17,7 @@ object Dependencies {
   val kotlinTest = "org.jetbrains.kotlin:kotlin-test:1.3.71"
   val ktlintVersion = "0.34.2"
   val loggingApi = "io.github.microutils:kotlin-logging:1.7.9"
-  val mavenPublishGradlePlugin = "com.vanniktech:gradle-maven-publish-plugin:0.9.0"
+  val mavenPublishGradlePlugin = "com.vanniktech:gradle-maven-publish-plugin:0.18.0"
   val moshiCore = "com.squareup.moshi:moshi:1.11.0"
   val moshiKotlin = "com.squareup.moshi:moshi-kotlin:1.11.0"
   val mustacheCompiler = "com.github.spullara.mustache.java:compiler:0.9.5"
