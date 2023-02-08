@@ -85,7 +85,7 @@ Cutting a Release
     sed -i "" \
       "s/\"app.cash.barber:\([^\:]*\):[^\"]*\"/\"app.cash.barber:\1:$RELEASE_VERSION\"/g" \
       `find . -name "README.md"`
-    ./gradlew clean uploadArchives
+    bin/gradle clean uploadArchives
     ```
 
 5. Visit [Sonatype Nexus][sonatype_nexus] to promote (close then release) the artifact. Or drop it if there is a problem!
