@@ -7,7 +7,7 @@ on:
       - '*.md'
 
 env:
-  GRADLE_OPTS: -Dorg.gradle.configureondemand=true -Dkotlin.incremental=false -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxPermSize=2048m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8"
+  GRADLE_OPTS: -Dorg.gradle.configureondemand=true -Dkotlin.incremental=false -Dorg.gradle.jvmargs="-Xmx3g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8"
 
 jobs:
   build:
