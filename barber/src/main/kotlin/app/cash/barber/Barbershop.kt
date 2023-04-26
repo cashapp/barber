@@ -50,6 +50,9 @@ interface Barbershop {
   /** Get any Warnings raised from initial install and validation */
   fun getWarnings(): List<String>
 
+  /** Transform Barbershop back into a builder with all Templates installed */
+  fun toBuilder(): BarbershopBuilder
+
   interface Builder {
     /**
      * Configures this Barbershop so that instances of documentTemplate.templateToken will
@@ -98,10 +101,10 @@ interface Barbershop {
 }
 
 inline fun <reified DD : app.cash.barber.models.DocumentData, reified D : Document> Barbershop.getBarber() = getBarber(
-    DD::class, D::class)
+  DD::class, D::class)
 
 inline fun <reified D : Document> Barbershop.getBarber(templateToken: TemplateToken) = getBarber(
-    templateToken, D::class)
+  templateToken, D::class)
 
 inline fun <reified DD : app.cash.barber.models.DocumentData> Barbershop.getTargetDocuments(version: Long? = null) =
-    getTargetDocuments(documentDataClass = DD::class, version = version)
+  getTargetDocuments(documentDataClass = DD::class, version = version)

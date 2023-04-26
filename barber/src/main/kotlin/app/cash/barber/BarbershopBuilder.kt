@@ -41,7 +41,7 @@ class BarbershopBuilder : Barbershop.Builder {
   )
 
   private val installedDocumentTemplates: MutableMap<BuilderDocumentTemplateKey, DocumentTemplateDb> =
-      mutableMapOf()
+    mutableMapOf()
 
   internal data class DocumentDb(
     val kParameter: KParameter,
@@ -49,7 +49,7 @@ class BarbershopBuilder : Barbershop.Builder {
   )
 
   private val installedDocuments =
-      HashBasedTable.create<BarberSignature, String, DocumentDb>()
+    HashBasedTable.create<BarberSignature, String, DocumentDb>()
 
   private var mustacheFactoryProvider = BarberMustacheFactoryProvider()
   private var localeResolver: LocaleResolver = MatchOrFirstLocaleResolver
@@ -64,15 +64,15 @@ class BarbershopBuilder : Barbershop.Builder {
     val locale = Locale(documentTemplate.locale!!)
 
     val versions =
-        installedDocumentTemplates.filter { (it, _) -> templateToken == it.templateToken && locale == it.locale }
+      installedDocumentTemplates.filter { (it, _) -> templateToken == it.templateToken && locale == it.locale }
     if (versions.isNotEmpty()) {
       val alreadyInstalledVersion = versions
-          .filter { (it, _) -> signature == it.sourceBarberSignature && version == it.version }
-          .entries
-          .firstOrNull()
+        .filter { (it, _) -> signature == it.sourceBarberSignature && version == it.version }
+        .entries
+        .firstOrNull()
       if (alreadyInstalledVersion != null) {
         val localeVersions =
-            installedDocumentTemplates.filter { (it, _) -> templateToken == it.templateToken }
+          installedDocumentTemplates.filter { (it, _) -> templateToken == it.templateToken }
         val installedLocales = localeVersions.keys.map { it.locale }.joinToString("\n")
         val installedVersions = localeVersions.keys.map { it.version }
         throw BarberException(errors = listOf("""
@@ -87,10 +87,10 @@ class BarbershopBuilder : Barbershop.Builder {
       }
     }
     installedDocumentTemplates[BuilderDocumentTemplateKey(
-        templateToken = templateToken,
-        locale = locale,
-        sourceBarberSignature = signature,
-        version = version
+      templateToken = templateToken,
+      locale = locale,
+      sourceBarberSignature = signature,
+      version = version
     )] = DocumentTemplateDb(documentTemplate = documentTemplate, compiledDocumentTemplate = null)
   }
 
@@ -117,7 +117,7 @@ class BarbershopBuilder : Barbershop.Builder {
     documentConstructor.parameters.associateBy { it.name }.forEach { (fieldName, kParameter) ->
       fieldName?.let {
         installedDocuments.put(document.getBarberSignature(), fieldName,
-            DocumentDb(kParameter, document))
+          DocumentDb(kParameter, document))
       }
     }
   }
@@ -185,24 +185,24 @@ class BarbershopBuilder : Barbershop.Builder {
     }
 
     maybeThrowBarberException(errors = errors, warnings = warnings,
-        warningsAsErrors = warningsAsErrors)
+      warningsAsErrors = warningsAsErrors)
 
     // Compile DocumentTemplates and perform initial validation
     forEach { (key, db) ->
       // Compile templates according to the MustacheFactory matching to the Document field encoding
       val compiledDocumentTemplate = db.documentTemplate
-          .compileAndValidate(
-              mustacheFactoryProvider = mustacheFactoryProvider,
-              installedDocuments = installedDocuments,
-              warnings = warnings,
-              warningsAsErrors = warningsAsErrors
-          )
+        .compileAndValidate(
+          mustacheFactoryProvider = mustacheFactoryProvider,
+          installedDocuments = installedDocuments,
+          warnings = warnings,
+          warningsAsErrors = warningsAsErrors
+        )
 
       installedDocumentTemplates[key] = db.copy(compiledDocumentTemplate = compiledDocumentTemplate)
     }
 
     maybeThrowBarberException(errors = errors, warnings = warnings,
-        warningsAsErrors = warningsAsErrors)
+      warningsAsErrors = warningsAsErrors)
 
     return installedDocumentTemplates
   }
@@ -217,19 +217,19 @@ class BarbershopBuilder : Barbershop.Builder {
       versions.entries.forEach { (builderDocumentTemplateKey, documentTemplateDb) ->
         documentTemplateDb.compiledDocumentTemplate?.targets?.forEach { target ->
           documentTargets[target] =
-              (documentTargets[target] ?: setOf()) + setOf(builderDocumentTemplateKey.version)
+            (documentTargets[target] ?: setOf()) + setOf(builderDocumentTemplateKey.version)
         }
       }
 
       val localeVersionsMap: Map<RealBarber.DocumentTemplateKey, DocumentTemplateDb> =
-          versions.entries.associate { (key, db) ->
-            val (_, locale, sourceBarberSignature, version) = key
-            RealBarber.DocumentTemplateKey(
-                locale = locale,
-                sourceBarberSignature = sourceBarberSignature,
-                version = version
-            ) to db
-          }
+        versions.entries.associate { (key, db) ->
+          val (_, locale, sourceBarberSignature, version) = key
+          RealBarber.DocumentTemplateKey(
+            locale = locale,
+            sourceBarberSignature = sourceBarberSignature,
+            version = version
+          ) to db
+        }
 
       val latestVersion = versions.keys.map { it.version }.maxOrNull()
       templateLatestVersions[templateToken] = latestVersion ?: -1
@@ -237,16 +237,21 @@ class BarbershopBuilder : Barbershop.Builder {
       documentTargets.forEach { (document, versions) ->
         if (versions.isNotEmpty()) {
           barbers[BarberKey(templateToken, document)] = RealBarber(
-              document = document,
-              installedDocuments = installedDocuments,
-              installedDocumentTemplates = localeVersionsMap,
-              localeResolver = localeResolver,
-              supportedVersionRanges = versions.asVersionRanges(),
-              versionResolver = versionResolver,
+            document = document,
+            installedDocuments = installedDocuments,
+            installedDocumentTemplates = localeVersionsMap,
+            localeResolver = localeResolver,
+            supportedVersionRanges = versions.asVersionRanges(),
+            versionResolver = versionResolver,
           )
         }
       }
     }
-    return RealBarbershop(barbers = barbers, warnings = warnings, templateLatestVersions = templateLatestVersions)
+    return RealBarbershop(
+      barbers = barbers,
+      warnings = warnings,
+      templateLatestVersions = templateLatestVersions,
+      documentTemplates = this.values.map { it.documentTemplate }.toSet()
+    )
   }
 }
