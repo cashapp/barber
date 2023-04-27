@@ -6,6 +6,7 @@ import app.cash.barber.models.TemplateToken
 import app.cash.barber.models.TemplateToken.Companion.getTemplateToken
 import app.cash.barber.version.VersionRange.Companion.supports
 import app.cash.protos.barber.api.DocumentData
+import app.cash.protos.barber.api.DocumentTemplate
 import kotlin.reflect.KClass
 
 internal class RealBarbershop(
@@ -17,7 +18,8 @@ internal class RealBarbershop(
    * may not even be supported by the Barber in the case of a newer version of a Document Template
    * removing the Barber's Document target.
    */
-  private val templateLatestVersions: Map<TemplateToken, Long>
+  private val templateLatestVersions: Map<TemplateToken, Long>,
+  private val documentTemplates: Set<DocumentTemplate>
 ) : Barbershop {
   @Suppress("UNCHECKED_CAST")
   override fun <DD : app.cash.barber.models.DocumentData, D : Document> getBarber(
@@ -57,7 +59,7 @@ internal class RealBarbershop(
       }
       if (problems.isEmpty()) {
         problems.add(
-            "Failed to get Barber<${documentClass.qualifiedName}>(templateToken=$templateToken), unknown error"
+          "Failed to get Barber<${documentClass.qualifiedName}>(templateToken=$templateToken), unknown error"
         )
       }
 
@@ -76,22 +78,31 @@ internal class RealBarbershop(
     version: Long?
   ): Set<KClass<out Document>> = barbers.filter { (barberKey, barber) ->
     barberKey.templateToken == templateToken &&
-        // If version is not explicitly specified, use latestTemplateVersionAcrossAllBarbers
-        barber.supportedVersionRanges.supports(version
-            ?: templateLatestVersions.getValue(barberKey.templateToken)
-        )
+      // If version is not explicitly specified, use latestTemplateVersionAcrossAllBarbers
+      barber.supportedVersionRanges.supports(version
+        ?: templateLatestVersions.getValue(barberKey.templateToken)
+      )
   }.keys.map { it.document }.toSet()
 
   override fun getTargetDocuments(
     documentData: DocumentData,
     version: Long?
   ): Set<KClass<out Document>> =
-      getTargetDocuments(
-        TemplateToken(documentData.template_token!!),
-        version
-      )
+    getTargetDocuments(
+      TemplateToken(documentData.template_token!!),
+      version
+    )
 
   override fun getAllBarbers(): Map<BarberKey, Barber<Document>> = barbers
+
+  override fun newBuilder() = BarbershopBuilder().apply {
+    barbers.keys.forEach {
+      installDocument(it.document)
+    }
+    documentTemplates.forEach {
+      installDocumentTemplate(it)
+    }
+  }
 
   override fun getWarnings(): List<String> = warnings
 }
