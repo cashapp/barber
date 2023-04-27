@@ -146,7 +146,7 @@ class BarbershopTest {
       .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_CA)
       .installDocumentTemplate<RecipientReceipt>(recipientReceiptSmsDocumentTemplateEN_GB)
       .build()
-    assertThat(barbershop.toBuilder().build().getAllBarbers().keys)
+    assertThat(barbershop.newBuilder().build().getAllBarbers().keys)
       .containsExactlyElementsOf(barbershop.getAllBarbers().keys)
   }
 }

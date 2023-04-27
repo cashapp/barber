@@ -95,7 +95,7 @@ internal class RealBarbershop(
 
   override fun getAllBarbers(): Map<BarberKey, Barber<Document>> = barbers
 
-  override fun toBuilder() = BarbershopBuilder().apply {
+  override fun newBuilder() = BarbershopBuilder().apply {
     barbers.keys.forEach {
       installDocument(it.document)
     }

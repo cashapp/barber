@@ -50,8 +50,8 @@ interface Barbershop {
   /** Get any Warnings raised from initial install and validation */
   fun getWarnings(): List<String>
 
-  /** Transform Barbershop back into a builder with all Templates installed */
-  fun toBuilder(): BarbershopBuilder
+  /** Create a new Builder from the existing Barbershop that includes all existing templates and documents. */
+  fun newBuilder(): BarbershopBuilder
 
   interface Builder {
     /**
