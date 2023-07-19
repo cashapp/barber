@@ -2,6 +2,7 @@ package app.cash.barber
 
 import app.cash.barber.models.Document
 import app.cash.barber.locale.Locale
+import app.cash.barber.models.CompiledDocumentTemplate
 import app.cash.barber.version.VersionRange
 import app.cash.protos.barber.api.DocumentData
 
@@ -27,4 +28,14 @@ interface Barber<D : Document> {
    * @param version is optional additional parameter; latest compatible will be used if not provided
    */
   fun render(documentData: DocumentData, locale: Locale, version: Long? = null): D
+
+  /**
+   * Expose the [CompiledDocumentTemplate] barber will use to render using a DocumentData proto with the given parameter
+   */
+  fun <DD : app.cash.barber.models.DocumentData> compiledDocumentTemplate(documentData: DD, locale: Locale, version: Long? = null): CompiledDocumentTemplate
+
+  /**
+   * Expose the [CompiledDocumentTemplate] barber will use to render using a DocumentData Kotlin data class with the given parameter
+   */
+  fun compiledDocumentTemplate(documentData: DocumentData, locale: Locale, version: Long? = null): CompiledDocumentTemplate
 }
