@@ -27,7 +27,6 @@ import app.cash.barber.locale.Locale.Companion.ES_US
 import app.cash.barber.models.BarberSignature
 import app.cash.barber.models.DocumentTemplate
 import app.cash.barber.version.SpecifiedOrNewestCompatibleVersionResolver
-import com.github.mustachejava.Code
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
