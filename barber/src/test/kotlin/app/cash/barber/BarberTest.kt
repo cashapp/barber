@@ -78,6 +78,27 @@ class BarberTest {
   }
 
   @Test
+  fun `Barber returns the expected compiledDocumentTemplate`() {
+    val barber = BarbershopBuilder()
+      .installDocument<TransactionalSmsDocument>()
+      .installDocumentTemplate<NullableSupportUrlReceipt>(nullableSupportUrlReceipt_EN_US)
+      .build()
+
+    val compiledDocumentTemplate = barber.getBarber<NullableSupportUrlReceipt, TransactionalSmsDocument>()
+      .compiledDocumentTemplate(nullSupportUrlReceipt, EN_US)
+
+
+    assertThat(compiledDocumentTemplate.version).isEqualTo(1)
+    assertThat(compiledDocumentTemplate.targets).isEqualTo(setOf(TransactionalSmsDocument::class))
+
+    assertThat(compiledDocumentTemplate.fields.size()).isEqualTo(1)
+    val documentTemplate = compiledDocumentTemplate.fields.get("sms_body", TransactionalSmsDocument::class)
+    assertThat(documentTemplate).isNotNull
+    assertThat(documentTemplate.template).isNotNull
+    assertThat(documentTemplate.template?.codes).isNotNull
+  }
+
+  @Test
   fun `Rendered spec is of specific Document type and allows field access`() {
     val barber = BarbershopBuilder()
       .installDocument<TransactionalSmsDocument>()
