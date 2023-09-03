@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout the repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Test
         run: bin/gradle build --full-stacktrace --info
