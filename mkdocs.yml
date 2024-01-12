@@ -5,7 +5,7 @@ site_description: "Barber"
 site_author: Square, Inc.
 remote_branch: gh-pages
 
-copyright: 'Copyright &copy; 2019-2021 Square, Inc.'
+copyright: 'Copyright &copy; 2019-2024 Square, Inc.'
 
 theme:
   name: 'material'
@@ -43,7 +43,5 @@ nav:
       - 'barber': 0.x/barber/app.cash.barber/index.md
       - 'barber.models': 0.x/barber/app.cash.barber.models/index.md
   - 'Change Log': changelog.md
-  - 'Releasing': releasing.md
-  - 'Manual Releasing': releasing-manual.md
   - 'Contributing': contributing.md
   - 'Stack Overflow ⏏': https://stackoverflow.com/questions/tagged/barber?sort=active

@@ -38,11 +38,12 @@ To get started using Barber, skim below to understand the different elements use
 Our [change log][changelog] has release history. API is subject to change. 
 
 ```kotlin
-implementation("app.cash.barber:barber:0.3.3")
+implementation("app.cash.barber:barber:2024.01.12.173005-933c241")
 ```
 
 Snapshot builds are [available][snap].
 
+Releases are done automatically in CI upon merge to master branch.
 
 ## DocumentData
 
