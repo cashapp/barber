@@ -94,8 +94,8 @@ class BarberTest {
     assertThat(compiledDocumentTemplate.fields.size()).isEqualTo(1)
     val documentTemplate = compiledDocumentTemplate.fields.get("sms_body", TransactionalSmsDocument::class)
     assertThat(documentTemplate).isNotNull
-    assertThat(documentTemplate.template).isNotNull
-    assertThat(documentTemplate.template?.codes).isNotNull
+    assertThat(documentTemplate?.template).isNotNull
+    assertThat(documentTemplate?.template?.codes).isNotNull
   }
 
   @Test

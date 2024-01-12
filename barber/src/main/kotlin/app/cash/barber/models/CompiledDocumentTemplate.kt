@@ -145,9 +145,9 @@ data class CompiledDocumentTemplate(
             }
             .forEach { signature ->
               // Render using a MustacheFactory that will respect any field BarberFieldEncoding annotations
-              val barberField = installedDocuments.get(signature, fieldName).kParameter
-                  .annotations
-                  .firstOrNull { it is BarberField } as BarberField?
+              val barberField = installedDocuments.get(signature, fieldName)?.kParameter
+                  ?.annotations
+                  ?.firstOrNull { it is BarberField } as BarberField?
               val mustache = fieldValue?.let { nonNullFieldValue ->
                 mustacheFactoryProvider.get(barberField?.encoding)
                   .compile(StringReader(nonNullFieldValue), nonNullFieldValue)

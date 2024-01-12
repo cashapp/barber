@@ -1,9 +1,11 @@
-apply(plugin = "com.vanniktech.maven.publish")
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.KotlinJvm
+import com.vanniktech.maven.publish.MavenPublishBaseExtension
 
-val jar by tasks.getting(Jar::class) {
-  manifest {
-    attributes("Automatic-Module-Name" to "app.cash.barber")
-  }
+plugins {
+  kotlin("jvm")
+  `java-library`
+  id("com.vanniktech.maven.publish.base")
 }
 
 dependencies {
@@ -26,4 +28,8 @@ dependencies {
   testImplementation(Dependencies.kotlinTest)
 }
 
-apply(from = "$rootDir/gradle-mvn-publish.gradle")
+configure<MavenPublishBaseExtension> {
+  configure(
+    KotlinJvm(javadocJar = JavadocJar.Dokka("dokkaGfm"))
+  )
+}
