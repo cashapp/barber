@@ -22,8 +22,8 @@ buildscript {
 }
 
 allprojects {
-  group = property("GROUP") as String
-  version = property("VERSION_NAME") as String
+  group = "app.cash.barber"
+  version = project.findProperty("VERSION_NAME") as? String ?: "0.0-SNAPSHOT"
 
   plugins.withId("com.vanniktech.maven.publish.base") {
     configure<MavenPublishBaseExtension> {
