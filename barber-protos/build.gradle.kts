@@ -1,7 +1,13 @@
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.KotlinJvm
+import com.vanniktech.maven.publish.MavenPublishBaseExtension
+
 plugins {
+  kotlin("jvm")
+  `java-library`
+  id("com.vanniktech.maven.publish.base")
   id("com.squareup.wire")
 }
-apply(plugin = "com.vanniktech.maven.publish")
 
 wire {
   protoLibrary = true
@@ -10,10 +16,8 @@ wire {
   }
 }
 
-val jar by tasks.getting(Jar::class) {
-  manifest {
-    attributes("Automatic-Module-Name" to "app.cash.barber")
-  }
+configure<MavenPublishBaseExtension> {
+  configure(
+    KotlinJvm(javadocJar = JavadocJar.Dokka("dokkaGfm"))
+  )
 }
-
-apply(from = "$rootDir/gradle-mvn-publish.gradle")
