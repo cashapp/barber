@@ -37,11 +37,11 @@ To get started using Barber, skim below to understand the different elements use
 
 Our [change log][changelog] has release history. API is subject to change. 
 
+Find the latest version on [Maven Central][mc].
+
 ```kotlin
 implementation("app.cash.barber:barber:2024.01.12.173005-933c241")
 ```
-
-Snapshot builds are [available][snap].
 
 Releases are done automatically in CI upon merge to master branch.
 
@@ -404,4 +404,4 @@ License
 
 [barber]: https://cashapp.github.io/barber/
 [changelog]: http://cashapp.github.io/barber/changelog/
-[snap]: https://oss.sonatype.org/content/repositories/snapshots/
+[mc]: https://central.sonatype.com/artifact/app.cash.barber/barber/versions
