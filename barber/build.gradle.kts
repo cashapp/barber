@@ -11,21 +11,21 @@ plugins {
 dependencies {
   api(project(":barber-protos"))
 
-  implementation(Dependencies.guava)
-  implementation(Dependencies.kotlinStdLibJdk8)
-  implementation(Dependencies.kotlinReflection)
-  implementation(Dependencies.moshiCore)
-  implementation(Dependencies.moshiKotlin)
-  implementation(Dependencies.okio)
-  implementation(Dependencies.okHttp)
-  implementation(Dependencies.mustacheCompiler)
-  implementation(Dependencies.wireMoshiAdapter)
-  implementation(Dependencies.wireRuntime)
+  implementation(libs.guava)
+  implementation(libs.kotlinStdLibJdk8)
+  implementation(libs.kotlinReflection)
+  implementation(libs.moshiCore)
+  implementation(libs.moshiKotlin)
+  implementation(libs.okio)
+  implementation(libs.okHttp)
+  implementation(libs.mustacheCompiler)
+  implementation(libs.wireMoshiAdapter)
+  implementation(libs.wireRuntime)
 
-  testImplementation(Dependencies.assertj)
-  testImplementation(Dependencies.junitApi)
-  testImplementation(Dependencies.junitEngine)
-  testImplementation(Dependencies.kotlinTest)
+  testImplementation(libs.assertj)
+  testImplementation(libs.junitApi)
+  testImplementation(libs.junitEngine)
+  testImplementation(libs.kotlinTest)
 }
 
 configure<MavenPublishBaseExtension> {

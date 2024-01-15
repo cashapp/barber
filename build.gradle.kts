@@ -13,11 +13,11 @@ buildscript {
   }
 
   dependencies {
-    classpath(Dependencies.dokkaGradlePlugin)
-    classpath(Dependencies.kotlinGradlePlugin)
-    classpath(Dependencies.spotlessPlugin)
-    classpath(Dependencies.mavenPublishGradlePlugin)
-    classpath(Dependencies.wireGradlePlugin)
+    classpath(libs.dokkaGradlePlugin)
+    classpath(libs.kotlinGradlePlugin)
+    classpath(libs.spotlessPlugin)
+    classpath(libs.mavenPublishGradlePlugin)
+    classpath(libs.wireGradlePlugin)
   }
 }
 
@@ -98,7 +98,7 @@ subprojects {
   //  spotless {
   //    kotlin {
   //      target "**/*.kt"
-  //      ktlint(dep.ktlintVersion).userData(listOf("indent_size": "2", "continuation_indent_size" : "4"))
+  //      ktlint(libs.versions.ktlint.get()).userData(listOf("indent_size": "2", "continuation_indent_size" : "4"))
   //    }
   //  }
 
