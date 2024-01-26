@@ -8,8 +8,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 buildscript {
   repositories {
     mavenCentral()
-    jcenter()
-    maven(url = "https://plugins.gradle.org/m2/")
+    gradlePluginPortal()
   }
 
   dependencies {
