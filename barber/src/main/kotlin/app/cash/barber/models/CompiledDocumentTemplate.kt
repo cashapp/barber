@@ -4,6 +4,7 @@ import app.cash.barber.BarberException
 import app.cash.barber.BarberMustacheFactoryProvider
 import app.cash.barber.BarbershopBuilder
 import app.cash.barber.api.prettyPrint
+import app.cash.barber.models.BarberSignature.Companion.getMinimumRequiredSignatureToSatisfy
 import app.cash.protos.barber.api.DocumentTemplate
 import com.github.mustachejava.Mustache
 import com.google.common.collect.HashBasedTable
@@ -59,109 +60,129 @@ data class CompiledDocumentTemplate(
 
       // DocumentTemplate must target one or more Documents
       if (target_signatures.isEmpty()) {
-        errors.add("""
-        |DocumentTemplate must have one or more target Documents, target_signatures is empty. 
-        |${this.prettyPrint()} 
-        """.trimMargin())
+        errors.add(
+          """
+          |DocumentTemplate must have one or more target Documents, target_signatures is empty. 
+          |${this.prettyPrint()} 
+          """.trimMargin()
+        )
       }
 
-      BarberException.maybeThrowBarberException(errors = errors, warnings = warnings,
-        warningsAsErrors = warningsAsErrors)
+      BarberException.maybeThrowBarberException(
+        errors = errors, warnings = warnings,
+        warningsAsErrors = warningsAsErrors
+      )
 
       // Common projections for the following validation
       val targetKParameterDocumentMap = target_signatures.map { signature ->
-        installedDocuments.row(BarberSignature(signature)).values.map {
-          it.document to it.kParameter
+        val targetSignature = BarberSignature(signature)
+        // KParameters of each Document that can satisfy each target signature
+        targetSignature.fields.keys.flatMap {
+          installedDocuments.column(it).entries.filter { (_, documentDb) ->
+            targetSignature.canSatisfy(documentDb.document.getMinimumRequiredSignatureToSatisfy())
+          }.map { column -> column.value.document to column.value.kParameter }
         }
-      }.reduce { acc, list -> acc + list }
-          .toSet()
-          .associate { (document, kParameter) ->
-            kParameter to document
-          }
-      val targetFieldNames = targetKParameterDocumentMap.keys.map {
-        it.name
-      }
-      val nonNullableTargetKParameterDocumentMap = targetKParameterDocumentMap.filter {
-        !it.key.type.isMarkedNullable
-      }
+      }.reduce { acc, list -> acc + list }.toSet()
+        .associate { (document, kParameter) -> kParameter to document }
+
+      val targetFieldNames = targetKParameterDocumentMap.keys.map { it.name }.toSet()
+
+      val nonNullableTargetKParameterDocumentMap =
+        targetKParameterDocumentMap.filter { !it.key.type.isMarkedNullable }
 
       // Documents listed in DocumentTemplate.target_signatures must be installed
-      val installedDocumentSignatures = installedDocuments.rowKeySet().map { it.signature }.toSet()
-      val notInstalledDocumentSignatures = target_signatures.filterNot {
-        installedDocumentSignatures.contains(it)
-      }.map { BarberSignature(it) }
-      if (notInstalledDocumentSignatures.isNotEmpty()) {
-        errors.add("""
+      val minimumRequiredSignaturesForInstalledDocuments =
+        installedDocuments.values().map { it.document }.toSet()
+          .map { it.getMinimumRequiredSignatureToSatisfy() }
+
+      val targetSignaturesWithNoDocumentThatSatisfy = target_signatures
+        .map { BarberSignature(it) }.filter { targetSignature ->
+          minimumRequiredSignaturesForInstalledDocuments.find {
+            targetSignature.canSatisfy(it)
+          } == null
+        }
+
+      if (targetSignaturesWithNoDocumentThatSatisfy.isNotEmpty()) {
+        errors.add(
+          """
           |Attempted to install DocumentTemplate without the corresponding Document being installed.
           |Not installed DocumentTemplate.target_signatures:
-          |$notInstalledDocumentSignatures
-          """.trimMargin())
+          |$targetSignaturesWithNoDocumentThatSatisfy
+          """.trimMargin()
+        )
       }
 
-      BarberException.maybeThrowBarberException(errors = errors, warnings = warnings,
-          warningsAsErrors = warningsAsErrors)
+      BarberException.maybeThrowBarberException(
+        errors = errors, warnings = warnings,
+        warningsAsErrors = warningsAsErrors
+      )
 
       // Confirm that all field names required to render documents are present in DocumentTemplate
       val documentTemplateFieldNames = fields.map { it.key }.toSet()
       val nonNullableTargetFieldNames =
-          nonNullableTargetKParameterDocumentMap.keys.map { it.name }.toSet()
+        nonNullableTargetKParameterDocumentMap.keys.map { it.name }.toSet()
       if (!documentTemplateFieldNames.containsAll(nonNullableTargetFieldNames)) {
         val missingFields = nonNullableTargetFieldNames.subtract(documentTemplateFieldNames)
         val documentsWithMissingFields = nonNullableTargetKParameterDocumentMap.filter {
           missingFields.contains(it.key.name)
         }
-            .map { (kParameter, document) -> "[document=${document.qualifiedName}] requires missing [field=${kParameter.name}]" }
-            .joinToString("\n")
-        errors.add("""
-              |Installed ${this.prettyPrint()}
-              |missing required fields for Document targets:
-              |$documentsWithMissingFields
-              """.trimMargin())
+          .map { (kParameter, document) -> "[document=${document.qualifiedName}] requires missing [field=${kParameter.name}]" }
+          .joinToString("\n")
+        errors.add(
+          """
+          |Installed ${this.prettyPrint()}
+          |missing required fields for Document targets:
+          |$documentsWithMissingFields
+          """.trimMargin()
+        )
       }
       if (documentTemplateFieldNames.size > targetFieldNames.size) {
         val additionalFields = documentTemplateFieldNames.filter { field ->
           !targetFieldNames.contains(field)
         }
-        errors.add("""
-              |Installed DocumentTemplate has additional fields that are not used in any target Document
-              |Additional fields:
-              |${additionalFields.joinToString("\n")}
-            """.trimMargin())
+        warnings.add(
+          """
+          |Installed DocumentTemplate has additional fields that are not used in any target Document
+          |Additional fields:
+          |${additionalFields.joinToString("\n")}
+          """.trimMargin()
+        )
       }
 
       // Compile the DocumentTemplate to enable further validation
       // fieldName, Document, Mustache used to render the field
       val documentTemplateFields =
-          HashBasedTable.create<String, KClass<out Document>, TemplateField>()
+        HashBasedTable.create<String, KClass<out Document>, TemplateField>()
       fields.map { field ->
         val fieldName = field.key!!
         val fieldValue = field.template
-        installedDocuments.column(fieldName).keys
-            .filter { signature ->
-              // Only add documents to table where the signature can be satisfied by the template
-              target_signatures.any {
-                BarberSignature(it).canSatisfy(signature)
-              }
+        installedDocuments.column(fieldName)
+          .filter { (_, documentDb) ->
+            // Only add documents to table where the signature can be satisfied by the template
+            target_signatures.any {
+              BarberSignature(it).canSatisfy(documentDb.document.getMinimumRequiredSignatureToSatisfy())
             }
-            .forEach { signature ->
-              // Render using a MustacheFactory that will respect any field BarberFieldEncoding annotations
-              val barberField = installedDocuments.get(signature, fieldName)?.kParameter
-                  ?.annotations
-                  ?.firstOrNull { it is BarberField } as BarberField?
-              val mustache = fieldValue?.let { nonNullFieldValue ->
-                mustacheFactoryProvider.get(barberField?.encoding)
-                  .compile(StringReader(nonNullFieldValue), nonNullFieldValue)
-              }
-              val document = installedDocuments.row(signature)[fieldName]!!.document
-              documentTemplateFields.put(fieldName, document, TemplateField(mustache))
+          }
+          .forEach { (signature, documentDb) ->
+            // Render using a MustacheFactory that will respect any field BarberFieldEncoding annotations
+
+            val barberField = documentDb.kParameter
+              .annotations
+              .firstOrNull { it is BarberField } as BarberField?
+            val mustache = fieldValue?.let { nonNullFieldValue ->
+              mustacheFactoryProvider.get(barberField?.encoding)
+                .compile(StringReader(nonNullFieldValue), nonNullFieldValue)
             }
+            val document = installedDocuments.row(signature)[fieldName]!!.document
+            documentTemplateFields.put(fieldName, document, TemplateField(mustache))
+          }
       }
 
       val targets = documentTemplateFields.columnKeySet()
       val compiledDocumentTemplate = CompiledDocumentTemplate(
-          fields = documentTemplateFields,
-          targets = targets,
-          version = version!!
+        fields = documentTemplateFields,
+        targets = targets,
+        version = version!!
       )
 
       // DocumentTemplates must only use variables from source DocumentData in their fields
@@ -172,37 +193,44 @@ data class CompiledDocumentTemplate(
           if (code !in signatureFieldNames) {
             val field = fields.find { it.key == name }
             errors.add(
-                "Missing variable [$code] for DocumentData with [templateToken=$templateToken] for DocumentTemplate field [$field]")
+              "Missing variable [$code] for DocumentData with [templateToken=$templateToken] for DocumentTemplate field [$field]"
+            )
           }
         }
       }
 
-      BarberException.maybeThrowBarberException(errors = errors, warnings = warnings,
-          warningsAsErrors = warningsAsErrors)
+      BarberException.maybeThrowBarberException(
+        errors = errors, warnings = warnings,
+        warningsAsErrors = warningsAsErrors
+      )
 
       // Check for unused Source signature field not used in any installed DocumentTemplate field
       val codes = compiledDocumentTemplate.reducedFieldCodeSet()
       explicitSourceSignature.fields.forEach { (fieldName, _) ->
         if (!codes.map { it }.contains(fieldName)) {
-          warnings.add("""
-          |Unused DocumentData variable [$fieldName] in Source signature [$source_signature] with no
-          |usage in ${prettyPrint()} 
-        """.trimMargin())
+          warnings.add(
+            """
+            |Unused DocumentData variable [$fieldName] in Source signature [$source_signature] with no
+            |usage in ${prettyPrint()} 
+            """.trimMargin()
+          )
         }
       }
 
-      BarberException.maybeThrowBarberException(errors = errors, warnings = warnings,
-          warningsAsErrors = warningsAsErrors)
+      BarberException.maybeThrowBarberException(
+        errors = errors, warnings = warnings,
+        warningsAsErrors = warningsAsErrors
+      )
 
       return compiledDocumentTemplate
     }
 
     /** Returns values from a Map as an aggregated set */
     fun Map<*, Set<String>>.reduceToValuesSet(): Set<String> =
-        if (values.isNotEmpty()) {
-          values.reduce { acc, codes -> acc + codes }
-        } else {
-          setOf()
-        }
+      if (values.isNotEmpty()) {
+        values.reduce { acc, codes -> acc + codes }
+      } else {
+        setOf()
+      }
   }
 }
