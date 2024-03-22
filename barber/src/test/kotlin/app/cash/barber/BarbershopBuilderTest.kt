@@ -10,6 +10,7 @@ import app.cash.barber.examples.ShadowEncodingEverythingPlaintextTestDocument
 import app.cash.barber.examples.ShadowPlaintextDocument
 import app.cash.barber.examples.TransactionalEmailDocument
 import app.cash.barber.examples.TransactionalSmsDocument
+import app.cash.barber.examples.TransactionalSmsDocumentWithOptionalMedia
 import app.cash.barber.examples.investmentPurchaseEncodingDocumentTemplateEN_US
 import app.cash.barber.examples.investmentPurchaseShadowEncodingDocumentTemplateEN_US
 import app.cash.barber.examples.mcDonaldsInvestmentPurchase
@@ -22,11 +23,12 @@ import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_US
 import app.cash.barber.examples.recipientReceiptSmsDocumentTemplateEN_USV2
 import app.cash.barber.examples.recipientReceiptSmsEmailDocumentTemplateEN_US
 import app.cash.barber.examples.senderReceiptEmailDocumentTemplateEN_US
+import app.cash.barber.locale.Locale
 import app.cash.barber.models.BarberFieldEncoding
 import app.cash.barber.models.BarberSignature
+import app.cash.barber.models.Document
 import app.cash.barber.models.DocumentData
 import app.cash.barber.models.DocumentTemplate
-import app.cash.barber.locale.Locale
 import app.cash.barber.models.TemplateToken.Companion.getTemplateToken
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -342,7 +344,7 @@ class BarbershopBuilderTest {
       .build()
 
     // investmentPurchaseEncodingDocumentTemplateEN_US only specifies EncodingTestDocument
-    //    but can support ShadowPlaintextDocument so it is included
+    // but can support ShadowPlaintextDocument, so it is also included
     assertEquals(
       setOf(EncodingTestDocument::class, ShadowPlaintextDocument::class),
       barber.getTargetDocuments(InvestmentPurchase::class.getTemplateToken())
@@ -351,6 +353,45 @@ class BarbershopBuilderTest {
       setOf(ShadowPlaintextDocument::class),
       barber.getTargetDocuments(SenderReceipt::class.getTemplateToken())
     )
+  }
+
+  @Test
+  fun `A Document with all optional fields is not a target of all Barbers`() {
+    data class PushDocumentWithAllFieldsOptional(
+      val push_androidTitle: String?,
+      val push_androidBody: String?,
+      val push_iOSTitle: String?,
+      val push_iOSBody: String?,
+    ) : Document
+
+    data class GreetingPushDocumentData(val name: String) : DocumentData
+
+    val greetingPushTemplateEnUs = DocumentTemplate(
+      fields = mapOf(
+        "push_iOSBody" to "Hi, {{name}}!",
+      ),
+      source = GreetingPushDocumentData::class,
+      targets = setOf(PushDocumentWithAllFieldsOptional::class),
+      locale = Locale.EN_US
+    )
+
+    val barber = BarbershopBuilder()
+      .installDocumentTemplate<InvestmentPurchase>(
+        investmentPurchaseEncodingDocumentTemplateEN_US
+      )
+      .installDocumentTemplate<GreetingPushDocumentData>(greetingPushTemplateEnUs)
+      .installDocument<EncodingTestDocument>()
+      .installDocument<PushDocumentWithAllFieldsOptional>()
+      .setWarningsAsErrors()
+      .build()
+
+    // Just because all fields of [PushDocumentWithAllFieldsOptional] are optional,
+    // it should not be targeted by every installed Document Template
+    assertThat(barber.getTargetDocuments(InvestmentPurchase::class.getTemplateToken()))
+      .isEqualTo(setOf(EncodingTestDocument::class))
+
+    assertThat(barber.getTargetDocuments(GreetingPushDocumentData::class.getTemplateToken()))
+      .isEqualTo(setOf(PushDocumentWithAllFieldsOptional::class))
   }
 
   @Test
@@ -418,9 +459,11 @@ class BarbershopBuilderTest {
       .build()
 
     val spec = barber.getBarber<InvestmentPurchase, EncodingTestDocument>()
-      .render(mcDonaldsInvestmentPurchase.copy(
-        url = "https://test.com/$iframeInjection$cssKeyframeInjection$htmlCode$javascriptAlertInjection",
-      ), Locale.EN_US)
+      .render(
+        mcDonaldsInvestmentPurchase.copy(
+          url = "https://test.com/$iframeInjection$cssKeyframeInjection$htmlCode$javascriptAlertInjection",
+        ), Locale.EN_US
+      )
 
     assertThat(spec).isEqualTo(
       EncodingTestDocument(
@@ -470,6 +513,115 @@ class BarbershopBuilderTest {
   }
 
   @Test
+  fun `Builds a backwards-compatible Barbershop when a nullable Document field is not present in a DocumentTemplate`() {
+    data class TradeReceipt(
+      val shares: String,
+      val ticker: String
+    ) : DocumentData
+
+    // "Old" version of the DocumentTemplate, created before the TransactionalSmsDocument had an optional field added
+    val oldTradeReceiptWithNoMediaEnUS = DocumentTemplate(
+      fields = mapOf(
+        "sms_body" to "(v1) You bought {{ shares }} shares of {{ ticker }}."
+      ),
+      source = TradeReceipt::class,
+      targets = setOf(TransactionalSmsDocument::class),
+      locale = Locale.EN_US,
+      version = 1
+    )
+
+    // "New" version of the DocumentTemplate, with the optional field included
+    val newTradeReceiptWithMediaEnUS = DocumentTemplate(
+      fields = mapOf(
+        "sms_body" to "(v2) You bought {{ shares }} shares of {{ ticker }}.",
+        "sms_mediaUrl" to "https://cdn.com/images/test.png"
+      ),
+      source = TradeReceipt::class,
+      targets = setOf(TransactionalSmsDocumentWithOptionalMedia::class),
+      locale = Locale.EN_US,
+      version = 2
+    )
+
+    val barbershop = BarbershopBuilder()
+      .installDocument<TransactionalSmsDocumentWithOptionalMedia>()
+      .installDocumentTemplate(oldTradeReceiptWithNoMediaEnUS.toProto())
+      .installDocumentTemplate(newTradeReceiptWithMediaEnUS.toProto())
+      .build()
+
+    val tradeReceiptDocumentData = TradeReceipt("3", "SQ")
+
+    val barber = barbershop.getBarber<TradeReceipt, TransactionalSmsDocumentWithOptionalMedia>()
+
+    val renderNoMedia = barber.render(tradeReceiptDocumentData, Locale.EN_US, 1)
+    assertThat(renderNoMedia.sms_body).isEqualTo("(v1) You bought 3 shares of SQ.")
+    assertThat(renderNoMedia.sms_mediaUrl).isNull()
+
+    val renderWithMedia = barber.render(tradeReceiptDocumentData, Locale.EN_US, 2)
+    assertThat(renderWithMedia.sms_body).isEqualTo("(v2) You bought 3 shares of SQ.")
+    assertThat(renderWithMedia.sms_mediaUrl).isEqualTo("https://cdn.com/images/test.png")
+  }
+
+  @Test
+  fun `Builds and warns when an extra Document field is present in a DocumentTemplate`() {
+
+    data class TradeReceipt(
+      val shares: String,
+      val ticker: String
+    ) : DocumentData
+
+    val tradeReceiptWithNoPrefixEnUS = DocumentTemplate(
+      fields = mapOf(
+        "sms_body" to "You bought {{ shares }} shares of {{ ticker }}."
+      ),
+      source = TradeReceipt::class,
+      targets = setOf(TransactionalSmsDocument::class),
+      locale = Locale.EN_US,
+      version = 1
+    )
+
+    val tradeReceiptWithPrefixEnUS = DocumentTemplate(
+      fields = mapOf(
+        "sms_body" to "You bought {{ shares }} shares of {{ ticker }}.",
+        "sms_mediaUrl" to "https://cdn.com/images/test.png"
+      ),
+      source = TradeReceipt::class,
+      targets = setOf(TransactionalSmsDocument::class),
+      locale = Locale.EN_US,
+      version = 2
+    )
+
+    val builder = BarbershopBuilder()
+      .installDocument<TransactionalSmsDocument>()
+      .installDocumentTemplate<TradeReceipt>(tradeReceiptWithNoPrefixEnUS)
+      .installDocumentTemplate<TradeReceipt>(tradeReceiptWithPrefixEnUS)
+
+    val barbershop = builder.build()
+
+    val tradeReceiptDocumentData = TradeReceipt("3", "SQ")
+
+    val barber = barbershop.getBarber<TradeReceipt, TransactionalSmsDocument>()
+
+    val renderNoPrefix = barber.render(tradeReceiptDocumentData, Locale.EN_US, 1)
+    assertThat(renderNoPrefix.sms_body).isEqualTo("You bought 3 shares of SQ.")
+
+    val renderWithPrefix = barber.render(tradeReceiptDocumentData, Locale.EN_US, 2)
+    assertThat(renderWithPrefix.sms_body).isEqualTo("You bought 3 shares of SQ.")
+
+    val exception = assertFailsWith<BarberException> {
+      builder
+        .setWarningsAsErrors()
+        .build()
+    }
+    assertThat(exception.toString()).isEqualTo(
+      """Warnings
+          |1) Installed DocumentTemplate has additional fields that are not used in any target Document
+          |Additional fields:
+          |sms_mediaUrl
+          |""".trimMargin()
+    )
+  }
+
+  @Test
   fun `Fails when variable in data is not used in any field template`() {
     data class TradeReceipt(
       val ticker: String,
@@ -494,11 +646,11 @@ class BarbershopBuilderTest {
     }
     assertEquals(
       """
-        |Warnings
-        |1) Unused DocumentData variable [shares] in Source signature [shares,1;ticker,1] with no
-        |usage in DocumentTemplate: [templateToken=tradeReceipt][locale=en-US][version=1] 
-        |
-      """.trimMargin(),
+          |Warnings
+          |1) Unused DocumentData variable [shares] in Source signature [shares,1;ticker,1] with no
+          |usage in DocumentTemplate: [templateToken=tradeReceipt][locale=en-US][version=1] 
+          |
+        """.trimMargin(),
       exception.toString()
     )
   }
@@ -522,18 +674,18 @@ class BarbershopBuilderTest {
     }
     assertEquals(
       """
-        |Errors
-        |1) Installed DocumentTemplate: [templateToken=recipientReceipt][locale=en-US][version=1]
-        |missing required fields for Document targets:
-        |[document=app.cash.barber.examples.TransactionalSmsDocument] requires missing [field=sms_body]
-        |
-      """.trimMargin(),
+          |Errors
+          |1) Installed DocumentTemplate: [templateToken=recipientReceipt][locale=en-US][version=1]
+          |missing required fields for Document targets:
+          |[document=app.cash.barber.examples.TransactionalSmsDocument] requires missing [field=sms_body]
+          |
+        """.trimMargin(),
       exception.toString()
     )
   }
 
   @Test
-  fun `DocumentTemplate has extra fields unused by target Documents`() {
+  fun `DocumentTemplate has extra fields unused by target Documents is a warning`() {
     val recipientReceiptDocumentData = DocumentTemplate(
       fields = mapOf(
         "sms_body" to "{{ sender }} sent you {{ amount }} on {{ deposit_expected_at }}. Cancel here: {{ cancelUrl }}",
@@ -544,21 +696,23 @@ class BarbershopBuilderTest {
       locale = Locale.EN_US
     )
 
+    val builder = BarbershopBuilder()
+      .installDocumentTemplate<RecipientReceipt>(recipientReceiptDocumentData)
+      .installDocument<TransactionalSmsDocument>()
+
+    assertThat(builder.build()).isNotNull
+
     val exception = assertFailsWith<BarberException> {
-      BarbershopBuilder()
-        .installDocumentTemplate<RecipientReceipt>(recipientReceiptDocumentData)
-        .installDocument<TransactionalSmsDocument>()
-        .build()
+      builder.setWarningsAsErrors().build()
     }
-    assertEquals(
+    assertThat(exception.toString()).isEqualTo(
       """
-        |Errors
-        |1) Installed DocumentTemplate has additional fields that are not used in any target Document
-        |Additional fields:
-        |extra_field
-        |
-      """.trimMargin(),
-      exception.toString()
+          |Warnings
+          |1) Installed DocumentTemplate has additional fields that are not used in any target Document
+          |Additional fields:
+          |extra_field
+          |
+        """.trimMargin()
     )
   }
 
@@ -590,16 +744,16 @@ class BarbershopBuilderTest {
     }
     assertEquals(
       """
-        |Errors
-        |1) Attempted to install DocumentTemplate that will overwrite an already installed locale version
-        |DocumentTemplate: [templateToken=recipientReceipt][locale=en-US][version=1]
-        |
-        |Already Installed DocumentTemplates
-        |TemplateToken: recipientReceipt
-        |Locales: [Locale=en-US]
-        |Installed Versions: [1]
-        |
-      """.trimMargin(),
+          |Errors
+          |1) Attempted to install DocumentTemplate that will overwrite an already installed locale version
+          |DocumentTemplate: [templateToken=recipientReceipt][locale=en-US][version=1]
+          |
+          |Already Installed DocumentTemplates
+          |TemplateToken: recipientReceipt
+          |Locales: [Locale=en-US]
+          |Installed Versions: [1]
+          |
+        """.trimMargin(),
       exception.toString()
     )
   }
