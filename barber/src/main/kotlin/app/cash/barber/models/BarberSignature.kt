@@ -72,7 +72,9 @@ data class BarberSignature(
 
     fun DocumentData.getBarberSignature() = BarberSignature(asFieldsMap())
 
-    private fun KClass<*>.asFieldsMap(): Map<String, Type> = memberProperties.mapToMaps { kProperty ->
+    private fun KClass<*>.asFieldsMap(includeNullableFields: Boolean = true): Map<String, Type> = memberProperties
+      .filter { includeNullableFields || !it.returnType.isMarkedNullable }
+      .mapToMaps { kProperty ->
       val name = kProperty.name
       // Only recursively define Signature for nested data classes
       val type = kProperty.returnType.classifier as? KClass<*>
@@ -109,5 +111,8 @@ data class BarberSignature(
     )
 
     fun Document.getBarberSignature() = BarberSignature(this::class.asFieldsMap())
+
+    fun KClass<*>.getMinimumRequiredSignatureToSatisfy() =  BarberSignature(asFieldsMap(includeNullableFields = false))
+
   }
 }

@@ -48,6 +48,7 @@ class BarbershopBuilder : Barbershop.Builder {
     val document: KClass<out Document>
   )
 
+  // HashBasedTable<BarberSignature, String fieldName, DocumentDb>
   private val installedDocuments =
     HashBasedTable.create<BarberSignature, String, DocumentDb>()
 
