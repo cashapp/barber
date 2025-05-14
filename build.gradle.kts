@@ -27,7 +27,7 @@ allprojects {
 
   plugins.withId("com.vanniktech.maven.publish.base") {
     configure<MavenPublishBaseExtension> {
-      publishToMavenCentral(SonatypeHost.DEFAULT, automaticRelease = true)
+      publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL, automaticRelease = true)
       signAllPublications()
       pom {
         description.set("A type safe Kotlin JVM library for building up localized, fillable, themed documents using Mustache templating.")

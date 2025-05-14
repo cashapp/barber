@@ -20,7 +20,7 @@ kotlinScriptRuntime = { module = "org.jetbrains.kotlin:kotlin-script-runtime", v
 kotlinStdLibJdk8 = { module = "org.jetbrains.kotlin:kotlin-stdlib-jdk8", version = "1.8.21" }
 kotlinTest = { module = "org.jetbrains.kotlin:kotlin-test", version = "1.8.21" }
 loggingApi = { module = "io.github.microutils:kotlin-logging", version = "1.7.9" }
-mavenPublishGradlePlugin = { module = "com.vanniktech:gradle-maven-publish-plugin", version = "0.25.2" }
+mavenPublishGradlePlugin = { module = "com.vanniktech:gradle-maven-publish-plugin", version = "0.31.0" }
 moshiCore = { module = "com.squareup.moshi:moshi", version = "1.15.0" }
 moshiKotlin = { module = "com.squareup.moshi:moshi-kotlin", version = "1.15.0" }
 mustacheCompiler = { module = "com.github.spullara.mustache.java:compiler", version = "0.9.5" }
